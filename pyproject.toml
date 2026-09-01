@@ -3,7 +3,13 @@ name = "sherlock-home"
 version = "0.1.0"
 description = "Local-first AI agent for personal finance analysis"
 requires-python = ">=3.11"
-dependencies = []
+
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pydantic-settings"
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
