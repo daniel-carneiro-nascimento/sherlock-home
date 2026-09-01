@@ -1,0 +1,53 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/*
+*.log
+
+# Financial data
+data/inbox/*
+data/processed/*
+data/private/*
+
+# Preserve directories
+!data/inbox/.gitkeep
+!data/processed/.gitkeep
+
+# Financial file types
+*.csv
+*.ofx
+*.qfx
+*.xlsx
+*.xls
+*.pdf
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Models
+models/
+*.gguf
+*.safetensors
+
+# Ollama
+.ollama/
+
+# OS
+.DS_Store
+Thumbs.db
