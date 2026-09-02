@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.db.base import Base
+
+from app.models.category_rule import CategoryRuleModel
+from app.models.merchant_alias import MerchantAliasModel
 from app.models.transaction import Transaction
 
 
@@ -51,6 +54,30 @@ def validate_test_database() -> None:
         )
 
 
+def clean_test_tables(
+    session: Session,
+) -> None:
+    """
+    Remove synthetic test data from all mutable tables.
+
+    This function must only be called after
+    validate_test_database() has succeeded.
+    """
+    session.execute(
+        delete(MerchantAliasModel)
+    )
+
+    session.execute(
+        delete(CategoryRuleModel)
+    )
+
+    session.execute(
+        delete(Transaction)
+    )
+
+    session.commit()
+
+
 @pytest.fixture(scope="session")
 def test_engine() -> Engine:
     """
@@ -82,10 +109,8 @@ def db_session(
     """
     Provide an isolated SQLAlchemy session for each test.
 
-    The transaction table is cleaned before and after each
-    test. Because test_engine can only point to a database
-    ending in '_test', this cleanup cannot target the normal
-    Sherlock Home database.
+    All mutable test tables are cleaned before and after
+    every test.
     """
     TestSessionLocal = sessionmaker(
         bind=test_engine,
@@ -96,19 +121,17 @@ def db_session(
     session = TestSessionLocal()
 
     try:
-        session.execute(
-            delete(Transaction)
+        clean_test_tables(
+            session
         )
-        session.commit()
 
         yield session
 
     finally:
         session.rollback()
 
-        session.execute(
-            delete(Transaction)
+        clean_test_tables(
+            session
         )
-        session.commit()
 
         session.close()

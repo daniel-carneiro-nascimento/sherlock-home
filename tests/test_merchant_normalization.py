@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+import re
 
 import pytest
 
@@ -12,6 +13,9 @@ from app.ingestion.merchant_normalization import (
 from app.ingestion.normalization import (
     CanonicalStatement,
     CanonicalTransaction,
+)
+from app.rules.merchant_aliases import (
+    MerchantAliasRule,
 )
 
 
@@ -100,6 +104,9 @@ def test_transaction_enrichment_preserves_financial_data():
         source="santander",
         source_type="bank_statement",
         source_account="synthetic-account",
+        merchant=None,
+        category=None,
+        transaction_type="expense",
     )
 
     enriched = normalize_transaction_merchant(
@@ -131,6 +138,83 @@ def test_transaction_enrichment_preserves_financial_data():
         enriched.source_account
         == transaction.source_account
     )
+    assert enriched.category == transaction.category
+    assert (
+        enriched.transaction_type
+        == transaction.transaction_type
+    )
+
+
+def test_transaction_merchant_alias_is_applied():
+    rules = (
+        MerchantAliasRule(
+            canonical_name="SYNTHETIC MARKET",
+            pattern=re.compile(
+                r"^SYNTHETIC MARKET(?:\s+\*\d+)?$",
+                re.IGNORECASE,
+            ),
+            priority=10,
+        ),
+    )
+
+    transaction = CanonicalTransaction(
+        transaction_date=date(2026, 6, 9),
+        amount=Decimal("-50.00"),
+        original_description=(
+            "PAGAMENTO DE BOLETO SYNTHETIC MARKET *1234"
+        ),
+        document="000001",
+        statement_month=date(2026, 6, 1),
+        source="santander",
+        source_type="bank_statement",
+        source_account="synthetic-account",
+        merchant=None,
+        category=None,
+        transaction_type="expense",
+    )
+
+    enriched = normalize_transaction_merchant(
+        transaction,
+        alias_rules=rules,
+    )
+
+    assert enriched.merchant == "SYNTHETIC MARKET"
+
+
+def test_unmatched_alias_preserves_extracted_merchant():
+    rules = (
+        MerchantAliasRule(
+            canonical_name="OTHER COMPANY",
+            pattern=re.compile(
+                r"^OTHER COMPANY ALT$",
+                re.IGNORECASE,
+            ),
+            priority=10,
+        ),
+    )
+
+    transaction = CanonicalTransaction(
+        transaction_date=date(2026, 6, 9),
+        amount=Decimal("-50.00"),
+        original_description=(
+            "PAGAMENTO DE BOLETO SYNTHETIC COMPANY"
+        ),
+        document="000001",
+        statement_month=date(2026, 6, 1),
+        source="santander",
+        source_type="bank_statement",
+        source_account="synthetic-account",
+        merchant=None,
+        category=None,
+        transaction_type="expense",
+    )
+
+    enriched = normalize_transaction_merchant(
+        transaction,
+        alias_rules=rules,
+    )
+
+    assert enriched.merchant == "SYNTHETIC COMPANY"
 
 
 def test_statement_merchant_normalization():
@@ -146,6 +230,9 @@ def test_statement_merchant_normalization():
             source="santander",
             source_type="bank_statement",
             source_account="synthetic-account",
+            merchant=None,
+            category=None,
+            transaction_type="expense",
         ),
         CanonicalTransaction(
             transaction_date=date(2026, 6, 10),
@@ -158,6 +245,9 @@ def test_statement_merchant_normalization():
             source="santander",
             source_type="bank_statement",
             source_account="synthetic-account",
+            merchant=None,
+            category=None,
+            transaction_type="expense",
         ),
     ]
 
@@ -179,7 +269,6 @@ def test_statement_merchant_normalization():
         normalized.transactions[0].merchant
         == "COMPANY TEST"
     )
-
     assert (
         normalized.transactions[1].merchant
         is None
@@ -197,4 +286,79 @@ def test_statement_merchant_normalization():
     assert (
         normalized.source_account
         == statement.source_account
-    ) 
+    )
+
+
+def test_statement_alias_rules_are_applied_to_all_transactions():
+    rules = (
+        MerchantAliasRule(
+            canonical_name="SYNTHETIC MARKET",
+            pattern=re.compile(
+                r"^SYNTHETIC MARKET(?:\s+\*\d+)?$",
+                re.IGNORECASE,
+            ),
+            priority=10,
+        ),
+    )
+
+    transactions = [
+        CanonicalTransaction(
+            transaction_date=date(2026, 6, 9),
+            amount=Decimal("-10.00"),
+            original_description=(
+                "PAGAMENTO DE BOLETO SYNTHETIC MARKET *1111"
+            ),
+            document=None,
+            statement_month=date(2026, 6, 1),
+            source="santander",
+            source_type="bank_statement",
+            source_account="synthetic-account",
+            merchant=None,
+            category=None,
+            transaction_type="expense",
+        ),
+        CanonicalTransaction(
+            transaction_date=date(2026, 6, 10),
+            amount=Decimal("-20.00"),
+            original_description=(
+                "PIX RECEBIDO SYNTHETIC MARKET *2222"
+            ),
+            document=None,
+            statement_month=date(2026, 6, 1),
+            source="santander",
+            source_type="bank_statement",
+            source_account="synthetic-account",
+            merchant=None,
+            category=None,
+            transaction_type="income",
+        ),
+    ]
+
+    statement = CanonicalStatement(
+        statement_month=date(2026, 6, 1),
+        source="santander",
+        source_type="bank_statement",
+        source_account="synthetic-account",
+        transactions=transactions,
+    )
+
+    normalized = normalize_statement_merchants(
+        statement,
+        alias_rules=rules,
+    )
+
+    assert [
+        transaction.merchant
+        for transaction in normalized.transactions
+    ] == [
+        "SYNTHETIC MARKET",
+        "SYNTHETIC MARKET",
+    ]
+
+    assert [
+        transaction.transaction_type
+        for transaction in normalized.transactions
+    ] == [
+        "expense",
+        "income",
+    ]

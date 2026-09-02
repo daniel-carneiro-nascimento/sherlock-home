@@ -5,6 +5,10 @@ from app.ingestion.normalization import (
     CanonicalStatement,
     CanonicalTransaction,
 )
+from app.rules.merchant_aliases import (
+    MerchantAliasRule,
+    get_merchant_alias_rules,
+)
 
 
 WHITESPACE_RE = re.compile(r"\s+")
@@ -80,12 +84,49 @@ def extract_merchant_from_description(
     return None
 
 
+def resolve_merchant_alias(
+    merchant: str,
+    *,
+    rules: tuple[MerchantAliasRule, ...] | None = None,
+) -> str:
+    normalized = normalize_merchant_name(
+        merchant
+    )
+
+    active_rules = (
+        get_merchant_alias_rules()
+        if rules is None
+        else tuple(
+            sorted(
+                rules,
+                key=lambda rule: rule.priority,
+            )
+        )
+    )
+
+    for rule in active_rules:
+        if rule.pattern.search(normalized):
+            return normalize_merchant_name(
+                rule.canonical_name
+            )
+
+    return normalized
+
+
 def normalize_transaction_merchant(
     transaction: CanonicalTransaction,
+    *,
+    alias_rules: tuple[MerchantAliasRule, ...] | None = None,
 ) -> CanonicalTransaction:
     merchant = extract_merchant_from_description(
         transaction.original_description
     )
+
+    if merchant is not None:
+        merchant = resolve_merchant_alias(
+            merchant,
+            rules=alias_rules,
+        )
 
     return replace(
         transaction,
@@ -95,10 +136,13 @@ def normalize_transaction_merchant(
 
 def normalize_statement_merchants(
     statement: CanonicalStatement,
+    *,
+    alias_rules: tuple[MerchantAliasRule, ...] | None = None,
 ) -> CanonicalStatement:
     transactions = [
         normalize_transaction_merchant(
-            transaction
+            transaction,
+            alias_rules=alias_rules,
         )
         for transaction in statement.transactions
     ]
@@ -106,4 +150,4 @@ def normalize_statement_merchants(
     return replace(
         statement,
         transactions=transactions,
-    ) 
+    )

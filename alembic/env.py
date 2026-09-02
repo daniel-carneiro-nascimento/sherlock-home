@@ -9,7 +9,8 @@ from app.db.database import database_url
 
 # Import models so SQLAlchemy registers their metadata.
 from app.models.transaction import Transaction  # noqa: F401
-
+from app.models.category_rule import CategoryRuleModel
+from app.models.merchant_alias import MerchantAliasModel
 
 config = context.config
 
