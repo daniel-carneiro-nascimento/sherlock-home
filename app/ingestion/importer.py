@@ -63,6 +63,7 @@ def import_statement(
         transaction = Transaction(
             date=tx.transaction_date,
             amount=tx.amount,
+            merchant=tx.merchant,
             original_description=(
                 tx.original_description
             ),
