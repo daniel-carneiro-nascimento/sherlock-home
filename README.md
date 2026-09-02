@@ -205,12 +205,19 @@ sherlock-home/
 │   │   ├── base.py
 │   │   └── database.py
 │   ├── ingestion/
+│   │   ├── expense_categorization.py
 │   │   ├── fingerprint.py
 │   │   ├── importer.py
+│   │   ├── merchant_normalization.py
 │   │   ├── normalization.py
-│   │   └── santander_pdf.py
+│   │   ├── santander_pdf.py
+│   │   └── transaction_typing.py
 │   ├── models/
 │   │   └── transaction.py
+│   ├── rules/
+│   │   ├── __init__.py
+│   │   ├── categories.py
+│   │   └── transaction_types.py
 │   ├── services/
 │   │   ├── ollama.py
 │   │   └── project_context.py
@@ -234,10 +241,17 @@ sherlock-home/
 ├── tests/
 │   ├── fixtures/
 │   ├── security/
+│   ├── conftest.py
+│   ├── test_category_rules.py
+│   ├── test_database_fixture.py
+│   ├── test_expense_categorization.py
 │   ├── test_fingerprint.py
 │   ├── test_importer.py
+│   ├── test_merchant_normalization.py
 │   ├── test_normalization.py
-│   └── test_santander_pdf.py
+│   ├── test_santander_pdf.py
+│   ├── test_transaction_type_rules.py
+│   └── test_transaction_typing.py
 ├── .env.example
 ├── .gitignore
 ├── alembic.ini
@@ -381,8 +395,8 @@ Text extracted from a real bank PDF is still protected financial data. It must r
 
 Detailed implementation and operating notes live under `docs/`:
 
-- `docs/financial-data-flow.md` — implemented financial ingestion pipeline
-- `docs/database.md` — PostgreSQL, SQLAlchemy, Alembic, schema, and idempotency
+- `docs/financial-data-flow.md` — implemented parser, normalization, merchant, transaction typing, categorization, fingerprint, and persistence pipeline
+- `docs/database.md` — PostgreSQL, SQLAlchemy, Alembic, transaction schema, test-database isolation, and idempotency
 - `docs/parsers/README.md` — parser architecture and bank-specific isolation
 - `docs/parsers/santander.md` — Santander PDF parser behavior
 - `docs/testing.md` — behavior-oriented testing, synthetic fixtures, parameterized inputs, and invariants
@@ -410,7 +424,11 @@ statement normalization
     ↓
 CanonicalStatement / CanonicalTransaction
     ↓
-deterministic validation
+merchant normalization
+    ↓
+transaction typing
+    ↓
+expense categorization
     ↓
 SHA-256 fingerprint
     ↓
@@ -420,6 +438,19 @@ local PostgreSQL
 ```
 
 The importer has been validated to skip previously imported transactions instead of duplicating them.
+
+`transaction_type` and `category` represent different dimensions:
+
+```text
+transaction_type
+    expense | income | transfer
+
+category
+    food | groceries | transport | utilities | health
+    shopping | housing | financing | leisure | taxes | None
+```
+
+Only transactions typed as `expense` are eligible for expense categorization. `income` and `transfer` are movement types, not expense categories. Merchant, transaction type, and category are deterministic derived data and do not participate in the transaction fingerprint.
 
 Bank-specific parsing is intentionally isolated so that changes in one bank's export format do not require changes to unrelated parsers or the canonical financial layer.
 
@@ -484,13 +515,21 @@ Current coverage includes:
 - multiline and inherited-date transaction behavior
 - canonical statement normalization
 - normalization invariants
+- merchant normalization
+- deterministic merchant extraction and conservative unknown handling
+- transaction-type taxonomy and deterministic typing
+- expense-category taxonomy and explicit rule priorities
+- expense-only categorization
 - transaction fingerprint invariants
 - idempotent statement import
+- persistence of derived merchant, category, and transaction type
+- isolated PostgreSQL test database
+- fail-closed guard preventing destructive tests from using the normal application database
 
 Current validated suite:
 
 ```text
-56 passed
+122 passed
 ```
 
 Run the complete suite with:
@@ -551,8 +590,10 @@ Security controls and financial invariants should be accompanied by deterministi
 - [ ] CSV ingestion
 - [ ] OFX ingestion
 - [x] Statement normalization
-- [ ] Merchant normalization
-- [ ] Expense categorization
+- [x] Transaction typing
+- [x] Category taxonomy and deterministic rule priority
+- [x] Merchant normalization
+- [x] Expense categorization
 
 ## Phase 4 — Financial Tools
 

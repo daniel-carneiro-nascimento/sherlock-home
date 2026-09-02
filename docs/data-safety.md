@@ -66,3 +66,25 @@ Real financial data may only be processed by explicitly approved local component
 ## Documentation and tests
 
 Repository documentation should describe formats with synthetic examples. Tests should reproduce layout mechanics using fictional values and identifiers.
+
+
+## Test database safety boundary
+
+Automated persistence tests must never operate on the normal Sherlock Home application database.
+
+The reference configuration separates:
+
+```text
+POSTGRES_DB=sherlock_home
+POSTGRES_TEST_DB=sherlock_home_test
+```
+
+`tests/conftest.py` validates the test database before destructive setup and fails closed if:
+
+- the test database is not configured
+- the test database equals the application database
+- the test database name does not end in `_test`
+
+Only the disposable test database may be cleaned automatically between tests.
+
+This protects locally imported financial records from accidental deletion during pytest execution.

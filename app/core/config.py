@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ollama_host: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen3:14b"
 
+    postgres_test_db: str = "sherlock_home_test"
     postgres_host: str = "127.0.0.1"
     postgres_port: int = 5432
     postgres_db: str = "sherlock_home"

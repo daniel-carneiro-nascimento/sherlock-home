@@ -26,8 +26,9 @@ The current transaction schema stores the canonical fields needed by the ingesti
 - original description
 - decimal amount
 - optional merchant
+- transaction type (`expense`, `income`, or `transfer`)
 - optional card
-- optional category
+- optional expense category
 - optional installment position/total
 - statement month
 - creation timestamp
@@ -49,6 +50,9 @@ amount
 normalized whitespace in description
 document or empty value
 statement month
+source
+source type
+source account
 occurrence index
 ```
 
@@ -73,3 +77,49 @@ The database also enforces uniqueness through a unique constraint on the fingerp
 ## Credentials
 
 Database credentials come from local configuration and must not enter LLM context, documentation examples containing real values, tests, or Git history.
+
+
+## Derived fields and identity
+
+`merchant`, `transaction_type`, and `category` are deterministic derived fields.
+
+They are persisted for later financial analysis, but they are intentionally excluded from the transaction fingerprint. Improving a merchant alias, movement-type rule, or category rule must not cause the same source transaction to appear as a new transaction.
+
+Current semantic split:
+
+```text
+transaction_type:
+  expense
+  income
+  transfer
+
+expense category:
+  food
+  groceries
+  transport
+  utilities
+  health
+  shopping
+  housing
+  financing
+  leisure
+  taxes
+  None
+```
+
+Only `expense` movements are eligible for expense categorization.
+
+## Test database isolation
+
+Database integration tests use a separate PostgreSQL database:
+
+```text
+POSTGRES_DB=sherlock_home
+POSTGRES_TEST_DB=sherlock_home_test
+```
+
+The pytest fixtures in `tests/conftest.py` fail closed if the test database matches the application database or if the configured test database does not end in `_test`.
+
+The test database is disposable and may be cleaned between tests. The normal application database must never be reset by the test suite.
+
+Schema changes to the application database continue to use Alembic. The disposable test database is created from SQLAlchemy metadata for test execution.

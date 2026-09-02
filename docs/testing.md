@@ -161,6 +161,72 @@ The normalization layer may canonicalize representation, but it must not silentl
 
 ---
 
+## Merchant Normalization Tests
+
+`tests/test_merchant_normalization.py` verifies deterministic merchant enrichment.
+
+The tests establish that:
+
+- recognized patterns produce normalized merchant names
+- whitespace normalization is deterministic
+- unknown patterns remain `None`
+- financial fields are preserved
+- statement-level enrichment does not mutate unrelated canonical metadata
+
+The merchant normalizer must not guess when no deterministic rule matches.
+
+---
+
+## Transaction Typing Tests
+
+`tests/test_transaction_typing.py` and `tests/test_transaction_type_rules.py` verify the movement-type taxonomy:
+
+```text
+expense
+income
+transfer
+```
+
+Tests cover explicit description rules, amount-sign fallback behavior, deterministic rule priority, custom rule injection, and preservation of canonical transaction data.
+
+The typing layer answers **what kind of financial movement occurred**.
+
+---
+
+## Expense Categorization Tests
+
+`tests/test_expense_categorization.py` and `tests/test_category_rules.py` verify the expense-purpose taxonomy and its rule engine.
+
+The current taxonomy is:
+
+```text
+food
+groceries
+transport
+utilities
+health
+shopping
+housing
+financing
+leisure
+taxes
+```
+
+Tests verify:
+
+- taxonomy values are unique
+- rule priorities are unique and sorted
+- every category has at least one rule
+- known synthetic merchants/descriptions map deterministically
+- unknown merchants remain uncategorized
+- rule priority resolves overlapping matches deterministically
+- non-expense transactions are never assigned an expense category
+- categorization preserves transaction type and financial data
+
+In this case, exact taxonomy strings are valid fixed expectations because the taxonomy itself is the rule being tested. This differs from a fixture-specific monetary value, which is merely one sample input.
+
+---
+
 ## Fingerprint Tests
 
 `tests/test_fingerprint.py` verifies deterministic transaction identity.
@@ -228,6 +294,39 @@ Second import:
 
 That property remains valid if the synthetic fixture later changes size for legitimate structural reasons.
 
+The importer integration test also verifies that derived `merchant`, `transaction_type`, and `category` values are persisted without becoming part of the fingerprint identity.
+
+---
+
+## Database Integration Test Isolation
+
+Persistence tests must never use the normal application database.
+
+The test configuration separates:
+
+```text
+POSTGRES_DB=sherlock_home
+POSTGRES_TEST_DB=sherlock_home_test
+```
+
+`tests/conftest.py` provides a dedicated SQLAlchemy engine and `db_session` fixture for integration tests.
+
+Before any destructive test setup, the fixture validates:
+
+```text
+POSTGRES_TEST_DB is configured
+POSTGRES_TEST_DB != POSTGRES_DB
+POSTGRES_TEST_DB ends with "_test"
+```
+
+If any condition fails, database tests fail closed.
+
+The test database may be cleaned between tests because it contains only synthetic test data. The application database must not be truncated, deleted from, or otherwise reset by pytest.
+
+`tests/test_database_fixture.py` also verifies the database identity with `SELECT current_database()`.
+
+This separation is a safety boundary, not only a test convenience.
+
 ---
 
 ## Security Tests
@@ -291,6 +390,22 @@ Normalization tests
     ↓
 canonical-model invariants
 
+Merchant normalization tests
+    ↓
+deterministic derived merchant
+
+Transaction typing tests
+    ↓
+movement-type taxonomy
+
+Expense categorization tests
+    ↓
+expense-purpose taxonomy and priority
+
+Database fixture tests
+    ↓
+test-database isolation and fail-closed safety
+
 Fingerprint tests
     ↓
 identity relationships
@@ -303,7 +418,7 @@ persistence and idempotency
 At the current checkpoint, the complete suite passes:
 
 ```text
-56 passed
+122 passed
 ```
 
 Run the suite with:
@@ -330,8 +445,9 @@ When a new bank or source format is added:
 4. Parameterize value formats that can vary.
 5. Normalize parser output into the canonical model.
 6. Verify normalization invariants.
-7. Reuse generic fingerprint and importer behavior.
-8. Verify the complete test suite remains green.
+7. Pass canonical transactions through generic merchant normalization, transaction typing, and expense categorization.
+8. Reuse generic fingerprint and importer behavior.
+9. Verify the complete test suite remains green.
 
 The parser should contain source-specific knowledge.
 

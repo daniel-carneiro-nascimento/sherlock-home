@@ -15,12 +15,12 @@ class CanonicalTransaction:
     original_description: str
     document: str | None
     statement_month: date
-
     source: str
     source_type: str
     source_account: str | None = None
     merchant: str | None = None
-
+    category: str | None = None
+    transaction_type: str | None = None
 
 @dataclass(frozen=True)
 class CanonicalStatement:
@@ -44,7 +44,6 @@ def normalize_santander_transaction(
     *,
     statement_month: date,
     source_account: str | None = None,
-    merchant=None,
 ) -> CanonicalTransaction:
     return CanonicalTransaction(
         transaction_date=transaction.date,
@@ -57,6 +56,9 @@ def normalize_santander_transaction(
         source="santander",
         source_type="bank_statement",
         source_account=source_account,
+        merchant=None,
+        category=None,
+        transaction_type=None,
     )
 
 

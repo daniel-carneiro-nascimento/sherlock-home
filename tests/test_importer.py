@@ -1,8 +1,11 @@
 from pathlib import Path
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.db.database import SessionLocal
+from app.ingestion.expense_categorization import (
+    categorize_statement_expenses,
+)
 from app.ingestion.importer import import_statement
 from app.ingestion.merchant_normalization import (
     normalize_statement_merchants,
@@ -23,7 +26,9 @@ FIXTURE = (
 )
 
 
-def test_import_is_idempotent():
+def test_import_is_idempotent(
+    db_session: Session,
+):
     text = FIXTURE.read_text(
         encoding="utf-8"
     )
@@ -39,59 +44,78 @@ def test_import_is_idempotent():
         statement
     )
 
+    statement = categorize_statement_expenses(
+        statement
+    )
+
     expected_count = len(
         statement.transactions
     )
 
     assert expected_count > 0
 
-    with SessionLocal() as session:
-        session.execute(
-            delete(Transaction)
+    inserted, skipped = import_statement(
+        db_session,
+        statement,
+    )
+
+    assert inserted == expected_count
+    assert skipped == 0
+
+    stored_transactions = db_session.scalars(
+        select(Transaction).order_by(
+            Transaction.id
         )
-        session.commit()
+    ).all()
 
-        inserted, skipped = import_statement(
-            session,
-            statement,
-        )
+    assert (
+        len(stored_transactions)
+        == expected_count
+    )
 
-        assert inserted == expected_count
-        assert skipped == 0
+    expected_merchants = [
+        transaction.merchant
+        for transaction in statement.transactions
+    ]
 
-        stored_transactions = session.scalars(
-            select(Transaction)
-        ).all()
+    stored_merchants = [
+        transaction.merchant
+        for transaction in stored_transactions
+    ]
 
-        assert (
-            len(stored_transactions)
-            == expected_count
-        )
+    assert (
+        stored_merchants
+        == expected_merchants
+    )
 
-        expected_merchants = [
-            tx.merchant
-            for tx in statement.transactions
-        ]
+    expected_categories = [
+        transaction.category
+        for transaction in statement.transactions
+    ]
 
-        stored_merchants = [
-            tx.merchant
-            for tx in stored_transactions
-        ]
+    stored_categories = [
+        transaction.category
+        for transaction in stored_transactions
+    ]
 
-        assert (
-            stored_merchants
-            == expected_merchants
-        )
+    assert (
+        stored_categories
+        == expected_categories
+    )
 
-        inserted, skipped = import_statement(
-            session,
-            statement,
-        )
+    inserted, skipped = import_statement(
+        db_session,
+        statement,
+    )
 
-        assert inserted == 0
-        assert skipped == expected_count
+    assert inserted == 0
+    assert skipped == expected_count
 
-        session.execute(
-            delete(Transaction)
-        )
-        session.commit() 
+    stored_transactions = db_session.scalars(
+        select(Transaction)
+    ).all()
+
+    assert (
+        len(stored_transactions)
+        == expected_count
+    ) 

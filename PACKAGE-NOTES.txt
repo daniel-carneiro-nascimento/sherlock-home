@@ -1,0 +1,22 @@
+Sherlock Home documentation update package
+
+Replace these repository files with the files in this archive:
+
+README.md
+docs/README.md
+docs/architecture.md
+docs/data-safety.md
+docs/database.md
+docs/financial-data-flow.md
+docs/testing.md
+
+This package documents the current post-refactor state:
+- merchant normalization
+- transaction typing (expense / income / transfer)
+- expense taxonomy and deterministic rule priority
+- separation of movement type from expense category
+- derived fields excluded from transaction fingerprint
+- isolated sherlock_home_test pytest database with fail-closed guard
+- 122-test green checkpoint
+
+Parser-specific documentation was intentionally not changed because the Santander parser contract itself did not change in this refactor.

@@ -10,7 +10,9 @@ from app.ingestion.normalization import (
     CanonicalStatement,
 )
 from app.models.transaction import Transaction
-
+from app.ingestion.transaction_typing import (
+    classify_statement_transactions,
+)
 
 def import_statement(
     session: Session,
@@ -60,20 +62,23 @@ def import_statement(
             skipped += 1
             continue
 
-        transaction = Transaction(
-            date=tx.transaction_date,
-            amount=tx.amount,
-            merchant=tx.merchant,
-            original_description=(
-                tx.original_description
-            ),
-            statement_month=(
-                tx.statement_month
-            ),
-            fingerprint=fingerprint,
+        session.add(
+            Transaction(
+                date=tx.transaction_date,
+                merchant=tx.merchant,
+                category=tx.category,
+                transaction_type=tx.transaction_type,
+                amount=tx.amount,
+                original_description=(
+                    tx.original_description
+                ),
+                statement_month=(
+                    tx.statement_month
+                ),
+                fingerprint=fingerprint,
+            )
         )
 
-        session.add(transaction)
         inserted += 1
 
     session.commit()
