@@ -69,6 +69,7 @@ PostgreSQL
 SQLAlchemy
 Alembic
 Financial statement parsers
+Canonical statement normalization
 Idempotent transaction importer
 Automated test suite
 ```
@@ -237,7 +238,9 @@ flowchart LR
     SOURCE[Financial Source]
 
     SOURCE --> PARSER[Source-Specific Parser]
-    PARSER --> CANON[Canonical Parsed Model]
+    PARSER --> PARSED[Source-Specific Parsed Model]
+    PARSED --> NORMALIZE[Statement Normalization]
+    NORMALIZE --> CANON[Canonical Financial Model]
     CANON --> VALIDATE[Deterministic Validation]
     VALIDATE --> FINGERPRINT[Transaction Fingerprint]
     FINGERPRINT --> IMPORTER[Idempotent Importer]
@@ -286,8 +289,12 @@ The architectural contract is:
 
 ```text
 Santander PDF ──> Santander Parser ──┐
-Bank B CSV ─────> Bank B Parser ─────┼──> Canonical parsed statement
-Bank C OFX ─────> Bank C Parser ─────┘
+Bank B CSV ─────> Bank B Parser ────────┼──> Source-specific parsed model
+Bank C OFX ─────> Bank C Parser ────────┘
+                                         ↓
+                                Statement normalization
+                                         ↓
+                           Canonical financial model
 ```
 
 This provides an important maintenance boundary:
@@ -364,11 +371,11 @@ Likewise, the financial parser should not depend on the PDF rendering engine bey
 
 ---
 
-## 10. Canonical Parsed Objects
+## 10. Parsed and Canonical Financial Objects
 
-The current Santander parser produces structured objects before persistence.
+Source-specific parsers produce an intermediate parsed representation.
 
-Conceptually:
+For the Santander parser, the structure is conceptually:
 
 ```text
 ParsedStatement
@@ -381,19 +388,54 @@ ParsedStatement
     └── balance
 ```
 
-This intermediate representation is useful because it isolates:
+This parsed representation reflects information extracted from the source format.
+
+It is not the persistence contract for the rest of Sherlock Home.
+
+The normalization layer converts source-specific parser output into the canonical financial representation:
 
 ```text
-external bank format
+CanonicalStatement
+├── statement_month
+├── source
+├── source_type
+├── source_account
+└── transactions[]
+    ├── transaction_date
+    ├── amount
+    ├── original_description
+    ├── document
+    ├── statement_month
+    ├── source
+    ├── source_type
+    └── source_account
 ```
 
-from:
+The current normalization implementation lives in:
 
 ```text
-database representation
+app/ingestion/normalization.py
 ```
 
-Future parsers should produce equivalent internal objects or an evolved canonical model.
+The boundary is:
+
+```text
+bank-specific format
+    ↓
+bank-specific parser
+    ↓
+source-specific parsed objects
+    ↓
+normalization
+    ↓
+canonical financial objects
+    ↓
+generic fingerprinting / importing / financial tools
+```
+
+This prevents downstream components from depending on Santander-specific parser classes or field conventions.
+
+Normalization must preserve financial meaning. It may canonicalize representation, such as whitespace in descriptions or source metadata, but it must not silently alter transaction amounts or dates.
 
 ---
 
@@ -563,7 +605,7 @@ flowchart TD
     DBQ -->|No| INSERT[Insert Transaction]
 ```
 
-This behavior is enforced before broader financial normalization is introduced.
+Fingerprinting and idempotent persistence operate on the canonical transaction representation produced by the normalization layer.
 
 ---
 
@@ -595,7 +637,7 @@ Tests should reproduce the structure of real source formats without reproducing 
 
 A synthetic fixture may preserve:
 
-- exact column spacing
+- exact or representative column spacing
 - page-break behavior
 - header wording
 - date format
@@ -603,42 +645,148 @@ A synthetic fixture may preserve:
 - multiline descriptions
 - missing document fields
 - balance placement
+- repeated headers
+- movement-section boundaries
 
-but should replace real values with synthetic equivalents.
+but must replace real financial and identifying values with synthetic equivalents.
 
-Example principle:
+The principle is:
 
 ```text
 Keep the format.
 Replace the data.
 ```
 
-This allows deterministic parser testing without storing real statements in Git.
+Fixtures are **structural inputs**, not golden financial records.
+
+A parser test should not depend on one arbitrary monetary value merely because that value happens to exist in the fixture.
+
+If a fixture changes from one valid synthetic amount to another valid synthetic amount, unrelated structural tests should continue to pass.
+
+When monetary behavior itself is under test, the preferred approach is parameterized synthetic input.
+
+Real statements must never be committed as fixtures.
 
 ---
 
 ## 18. Test Strategy
 
-Automated tests are a core part of the architecture.
+Automated tests are a core architectural component.
 
-The current test suite covers areas including:
+Sherlock Home uses three complementary test styles:
 
 ```text
-security policy
-runtime compromise state
-shutdown behavior
-shutdown coordinator
-tool authorization
-Santander statement parsing
-Brazilian decimal parsing
-statement period parsing
-transaction fingerprinting
-idempotent importing
+Structural fixture tests
+    → source layout and parser behavior
+
+Parameterized tests
+    → classes of valid inputs
+
+Invariant tests
+    → properties that must always hold
 ```
 
-The current checkpoint has a fully passing automated suite.
+This deliberately avoids a "golden financial fixture" model where parser correctness is coupled to one arbitrary set of synthetic balances or amounts.
 
-Tests should be added whenever a security rule, parser behavior, or financial invariant is introduced.
+### Parser tests
+
+Parser tests verify structural behavior such as:
+
+- statement-period extraction
+- transaction detection
+- repeated-header handling
+- multiline description handling
+- inherited transaction dates
+- missing optional fields
+- movement-section boundaries
+
+Brazilian monetary parsing is tested independently with multiple parameterized representations.
+
+### Normalization tests
+
+Normalization tests verify invariants rather than fixture values.
+
+Examples include:
+
+```text
+input amount = canonical amount
+input date = canonical date
+document is preserved
+description whitespace is canonicalized
+Santander input receives source = "santander"
+source_type and source_account are preserved correctly
+```
+
+The normalization layer must not silently change financial value semantics.
+
+### Fingerprint tests
+
+Fingerprint tests do not hard-code literal SHA-256 outputs.
+
+They verify identity relationships:
+
+```text
+same canonical transaction + same occurrence
+    => same fingerprint
+
+different occurrence
+    => different fingerprint
+
+different identity attribute
+    => different fingerprint
+```
+
+### Importer tests
+
+Importer tests verify persistence properties rather than fixture size.
+
+The expected count is derived from the normalized statement:
+
+```python
+expected_count = len(statement.transactions)
+```
+
+The invariant is:
+
+```text
+first import:
+    inserted = expected_count
+    skipped = 0
+
+second import:
+    inserted = 0
+    skipped = expected_count
+```
+
+This keeps idempotency tests valid if a synthetic fixture legitimately changes size.
+
+### Security tests
+
+Security tests remain deterministic and rule-oriented.
+
+They verify:
+
+- allowed versus blocked operations
+- security rule identifiers
+- runtime state transitions
+- fail-closed behavior
+- shutdown coordination
+- sanitized audit output
+- tool authorization
+
+The current checkpoint has a fully passing automated suite:
+
+```text
+56 passed
+```
+
+Tests should be added whenever a security rule, parser behavior, normalization rule, fingerprint identity rule, persistence invariant, or financial invariant is introduced.
+
+Detailed testing methodology is documented in:
+
+```text
+docs/testing.md
+```
 
 ---
 
@@ -652,7 +800,8 @@ sequenceDiagram
     participant PDF as Santander PDF
     participant Extract as pdftotext -layout
     participant Parser as Santander Parser
-    participant Validate as Sanity Checks
+    participant Normalize as Statement Normalizer
+    participant Validate as Deterministic Validation
     participant FP as Fingerprint Builder
     participant Import as Idempotent Importer
     participant DB as PostgreSQL
@@ -662,14 +811,18 @@ sequenceDiagram
     Parser->>Parser: Parse statement period
     Parser->>Parser: Locate movement section
     Parser->>Parser: Parse transactions
-    Parser->>Validate: ParsedStatement
-    Validate->>FP: Valid transactions
+    Parser->>Normalize: ParsedStatement
+    Normalize->>Normalize: Build canonical transactions
+    Normalize->>Validate: CanonicalStatement
+    Validate->>FP: Valid canonical transactions
     FP->>Import: Fingerprinted transactions
     Import->>DB: Insert unseen transactions
     Import->>DB: Skip existing fingerprints
 ```
 
 No external AI service participates in this pipeline.
+
+The importer depends on the canonical model rather than directly on Santander parser classes. Future bank parsers should therefore terminate at the same normalization boundary before generic identity and persistence logic is applied.
 
 ---
 
@@ -702,6 +855,7 @@ app/db/base.py
 app/db/database.py
 app/models/transaction.py
 app/ingestion/santander_pdf.py
+app/ingestion/normalization.py
 app/ingestion/fingerprint.py
 app/ingestion/importer.py
 ```
@@ -755,7 +909,6 @@ parsers/
 The next financial-data stages include:
 
 ```text
-statement normalization
 merchant normalization
 expense categorization
 additional bank parsers

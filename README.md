@@ -207,6 +207,7 @@ sherlock-home/
 │   ├── ingestion/
 │   │   ├── fingerprint.py
 │   │   ├── importer.py
+│   │   ├── normalization.py
 │   │   └── santander_pdf.py
 │   ├── models/
 │   │   └── transaction.py
@@ -235,6 +236,7 @@ sherlock-home/
 │   ├── security/
 │   ├── test_fingerprint.py
 │   ├── test_importer.py
+│   ├── test_normalization.py
 │   └── test_santander_pdf.py
 ├── .env.example
 ├── .gitignore
@@ -383,7 +385,7 @@ Detailed implementation and operating notes live under `docs/`:
 - `docs/database.md` — PostgreSQL, SQLAlchemy, Alembic, schema, and idempotency
 - `docs/parsers/README.md` — parser architecture and bank-specific isolation
 - `docs/parsers/santander.md` — Santander PDF parser behavior
-- `docs/testing.md` — synthetic fixtures and deterministic testing
+- `docs/testing.md` — behavior-oriented testing, synthetic fixtures, parameterized inputs, and invariants
 - `docs/data-safety.md` — rules for handling real statements and extracted text
 - `docs/architecture.md` — broader project architecture
 
@@ -404,7 +406,11 @@ Santander-specific deterministic parser
     ↓
 ParsedStatement / ParsedTransaction
     ↓
-sanity validation
+statement normalization
+    ↓
+CanonicalStatement / CanonicalTransaction
+    ↓
+deterministic validation
     ↓
 SHA-256 fingerprint
     ↓
@@ -431,7 +437,32 @@ Detailed documentation:
 
 # Automated Tests
 
-Security, ingestion, and persistence behavior are covered by `pytest`.
+Security, ingestion, normalization, identity, and persistence behavior are covered by `pytest`.
+
+Sherlock Home uses behavior-oriented tests rather than treating synthetic financial fixtures as golden records.
+
+The testing model is:
+
+```text
+Structural fixture
+    → validates source layout and parser behavior
+
+Parameterized input
+    → validates classes of valid values
+
+Invariant tests
+    → validate properties that must always hold
+```
+
+A fixture is therefore not treated as a golden financial record.
+
+Examples:
+
+- Santander fixtures validate layout, multiline descriptions, inherited dates, repeated headers, and section boundaries.
+- Brazilian monetary parsing is tested with multiple parameterized synthetic values.
+- Normalization tests verify invariants such as amount preservation, source metadata, and canonical description formatting.
+- Fingerprint tests verify relationships such as same identity → same fingerprint and changed identity → different fingerprint.
+- Importer tests derive the expected transaction count from the normalized statement rather than hard-coding fixture-specific counts.
 
 Current coverage includes:
 
@@ -448,24 +479,35 @@ Current coverage includes:
 - shutdown request state
 - graceful shutdown coordinator integration
 - tool authorization policy
-- Santander statement parsing
-- Brazilian monetary parsing
-- transaction fingerprint stability
+- Santander statement structure parsing
+- parameterized Brazilian monetary parsing
+- multiline and inherited-date transaction behavior
+- canonical statement normalization
+- normalization invariants
+- transaction fingerprint invariants
 - idempotent statement import
 
 Current validated suite:
 
 ```text
-35 passed
+56 passed
 ```
 
 Run the complete suite with:
 
 ```bash
+pytest -q
+```
+
+For verbose test names:
+
+```bash
 pytest -v
 ```
 
-Security controls should be accompanied by deterministic tests whenever practical.
+Detailed testing methodology is documented in **[docs/testing.md](docs/testing.md)**.
+
+Security controls and financial invariants should be accompanied by deterministic tests whenever practical.
 
 ---
 
@@ -508,7 +550,7 @@ Security controls should be accompanied by deterministic tests whenever practica
 - [x] Idempotent statement import
 - [ ] CSV ingestion
 - [ ] OFX ingestion
-- [ ] Statement normalization
+- [x] Statement normalization
 - [ ] Merchant normalization
 - [ ] Expense categorization
 
