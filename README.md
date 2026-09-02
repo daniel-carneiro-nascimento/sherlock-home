@@ -933,76 +933,83 @@ Security controls should be accompanied by deterministic tests whenever practica
 
 # Roadmap
 
+### Legend
+
+- ✅ Completed
+- ⏳ In progress
+- ⬜ Planned / pending
+
+
 ## Phase 1 — Local Runtime
 
-- [x] Local LLM runtime
-- [x] Local inference validated
-- [x] Ollama integration
-- [x] Qwen3 integration
-- [x] FastAPI
-- [x] Local project context
-- [x] Deterministic security enforcement
+- ✅ Local LLM runtime
+- ✅ Local inference validated
+- ✅ Ollama integration
+- ✅ Qwen3 integration
+- ✅ FastAPI
+- ✅ Local project context
+- ✅ Deterministic security enforcement
 
 ## Phase 2 — Security
 
-- [x] Approved model validation
-- [x] Approved local destination validation
-- [x] Sanitized security event logging
-- [x] Controlled policy exceptions
-- [x] Data egress protection
-- [x] Secret detection
-- [x] Policy bypass detection
-- [x] Automated security tests
-- [x] Runtime compromise state
-- [x] Fail-closed behavior after critical violations
-- [x] Controlled shutdown request state
-- [ ] FastAPI/Uvicorn graceful shutdown lifecycle integration
-- [ ] Tool authorization policy
+- ✅ Approved model validation
+- ✅ Approved local destination validation
+- ✅ Sanitized security event logging
+- ✅ Controlled policy exceptions
+- ✅ Data egress protection
+- ✅ Secret detection
+- ✅ Policy bypass detection
+- ✅ Automated security tests
+- ✅ Runtime compromise state
+- ✅ Fail-closed behavior after critical violations
+- ✅ Controlled shutdown request state
+- ⏳ FastAPI/Uvicorn graceful shutdown lifecycle integration
+- ⬜ Tool authorization policy
 
 ## Phase 3 — Financial Data
 
-- [ ] PostgreSQL or alternative local database
-- [ ] Transaction schema
-- [ ] CSV ingestion
-- [ ] OFX ingestion
-- [ ] Statement normalization
-- [ ] Merchant normalization
-- [ ] Expense categorization
+- ⬜ PostgreSQL or alternative local database
+- ⬜ Transaction schema
+- ⬜ CSV ingestion
+- ⬜ OFX ingestion
+- ⬜ Statement normalization
+- ⬜ Merchant normalization
+- ⬜ Expense categorization
 
 ## Phase 4 — Financial Tools
 
-- [ ] Monthly spending
-- [ ] Category spending
-- [ ] Recurring expenses
-- [ ] Cash-flow analysis
-- [ ] Spending comparison
-- [ ] Anomaly detection
+- ⬜ Monthly spending
+- ⬜ Category spending
+- ⬜ Recurring expenses
+- ⬜ Cash-flow analysis
+- ⬜ Spending comparison
+- ⬜ Anomaly detection
 
 ## Phase 5 — Agentic Layer
 
-- [ ] Tool dispatcher
-- [ ] Deterministic tool execution
-- [ ] Structured tool responses
-- [ ] Agent reasoning
-- [ ] Financial workflows
-- [ ] Tool permission boundaries
+- ⬜ Tool dispatcher
+- ⬜ Deterministic tool execution
+- ⬜ Structured tool responses
+- ⬜ Agent reasoning
+- ⬜ Financial workflows
+- ⬜ Tool permission boundaries
 
 ## Phase 6 — Local Retrieval
 
-- [ ] Local embeddings
-- [ ] Local vector storage
-- [ ] Financial document retrieval
-- [ ] Selective context injection
-- [ ] Retrieval security controls
+- ⬜ Local embeddings
+- ⬜ Local vector storage
+- ⬜ Financial document retrieval
+- ⬜ Selective context injection
+- ⬜ Retrieval security controls
 
 ## Phase 7 — User Interface
 
-- [ ] Local dashboard
-- [ ] Financial charts
-- [ ] Natural-language query interface
-- [ ] Monthly reports
-- [ ] Alerts
-- [ ] Financial insights
+- ⬜ Local dashboard
+- ⬜ Financial charts
+- ⬜ Natural-language query interface
+- ⬜ Monthly reports
+- ⬜ Alerts
+- ⬜ Financial insights
 
 ---
 
