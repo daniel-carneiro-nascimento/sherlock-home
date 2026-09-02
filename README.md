@@ -168,7 +168,7 @@ sequenceDiagram
 
     User->>FastAPI: POST /chat
 
-    FastAPI->>Security: Validate model and destination
+    FastAPI->>Security: Validate model, endpoint, data policy, secrets, and bypass attempts
 
     alt Security policy violation
         Security->>Security: Block operation
@@ -218,6 +218,64 @@ As the project grows, this can later evolve into:
 - selective context loading
 
 Protected financial data must still follow the same security rules regardless of retrieval method.
+
+---
+
+# Security by Design
+
+Sherlock Home follows a **Security by Design** approach.
+
+Security is part of the core architecture and is not treated as an optional feature added after implementation.
+
+The LLM is treated as an **untrusted reasoning component for security decisions**. It may interpret requests, suggest actions, and orchestrate workflows, but it does not decide whether a protected operation is allowed to execute.
+
+Security decisions are enforced by deterministic application code.
+
+```mermaid
+flowchart TD
+
+    USER[User / Input]
+
+    USER --> API[FastAPI]
+    API --> LLM[LLM Reasoning]
+    LLM --> POLICY[Deterministic Policy Enforcement]
+
+    POLICY --> DECISION{Allowed?}
+
+    DECISION -->|Yes| RESOURCE[Approved Tool / Resource]
+    DECISION -->|No| BLOCK[Block Operation]
+
+    BLOCK --> AUDIT[Sanitized Security Audit]
+```
+
+This architecture follows principles similar to a **Reference Monitor** and a **Policy Enforcement Point**:
+
+- protected operations must pass through an enforcement layer
+- policy decisions are deterministic and testable
+- the LLM cannot override security rules
+- network destinations are explicitly allowlisted
+- AI models are explicitly allowlisted
+- protected data has explicit processing permissions
+- secrets are blocked from LLM context
+- explicit policy-bypass attempts are detected and blocked
+- unauthorized actions generate sanitized audit events
+- critical violations mark the runtime as compromised
+- a compromised runtime fails closed and rejects future protected operations
+- critical violations can request a controlled shutdown
+
+The goal is not merely to run the LLM offline.
+
+The goal is to ensure that even if the model is manipulated, confused, or prompt-injected, protected operations remain subject to deterministic code outside the model.
+
+```text
+LLM = proposes or requests an action
+
+Security Layer = decides whether it is allowed
+
+Deterministic Code = executes approved operations
+```
+
+This separation is a fundamental architectural principle of Sherlock Home.
 
 ---
 
@@ -273,6 +331,12 @@ The current security architecture is organized around:
 app/core/security.py
 app/core/security_enforcer.py
 app/core/audit.py
+app/core/network_policy.py
+app/core/data_policy.py
+app/core/secret_detector.py
+app/core/policy_bypass.py
+app/core/runtime_state.py
+app/core/shutdown.py
 ```
 
 ## `security.py`
@@ -354,6 +418,45 @@ The purpose of the audit event is to record:
 
 The purpose is not to log the sensitive content that caused the event.
 
+
+## `network_policy.py`
+
+Defines explicit network endpoint allowlists using scheme, host, and port.
+
+An endpoint is not trusted merely because it uses `localhost` or another local address. The exact service destination must be explicitly approved.
+
+## `data_policy.py`
+
+Defines data classifications and determines which classes of data may be processed by each approved destination.
+
+Current classifications include:
+
+- `PUBLIC`
+- `PROJECT`
+- `PERSONAL`
+- `FINANCIAL`
+- `SECRET`
+
+`SECRET` data is prohibited from entering LLM context, even when the LLM runtime is local.
+
+## `secret_detector.py`
+
+Performs deterministic detection of secret-like input patterns before user content is sent to the LLM.
+
+Examples include password assignments, bearer tokens, private keys, generic API-key patterns, and card-like numeric sequences.
+
+## `policy_bypass.py`
+
+Detects explicit attempts to disable, override, bypass, or extract protected policy and system instructions. Prompt-injection detection is an additional control, not the primary security boundary.
+
+## `runtime_state.py`
+
+Tracks whether the current runtime is considered safe or compromised. A critical violation can mark the runtime as compromised. Once compromised, protected operations fail closed and are rejected.
+
+## `shutdown.py`
+
+Maintains a controlled shutdown request state. Critical violations may request a graceful shutdown without directly killing the process from arbitrary enforcement code. Full FastAPI/Uvicorn lifecycle integration is still planned.
+
 ---
 
 # Security Policy Rules
@@ -401,7 +504,7 @@ flowchart LR
 
     SAFE -->|Yes| CONTINUE
 
-    SAFE -->|No| SHUTDOWN[Clean Shutdown]
+    SAFE -->|No| REQUEST[Request Controlled Shutdown]
 ```
 
 A normal policy violation should not automatically terminate the application.
@@ -536,8 +639,14 @@ sherlock-home/
 │   ├── core/
 │   │   ├── audit.py
 │   │   ├── config.py
+│   │   ├── data_policy.py
+│   │   ├── network_policy.py
+│   │   ├── policy_bypass.py
+│   │   ├── runtime_state.py
+│   │   ├── secret_detector.py
 │   │   ├── security.py
-│   │   └── security_enforcer.py
+│   │   ├── security_enforcer.py
+│   │   └── shutdown.py
 │   ├── db/
 │   ├── ingestion/
 │   ├── models/
@@ -557,6 +666,10 @@ sherlock-home/
 ├── logs/
 ├── scripts/
 ├── tests/
+│   └── security/
+│       ├── test_runtime_state.py
+│       ├── test_security.py
+│       └── test_shutdown.py
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
@@ -569,6 +682,8 @@ sherlock-home/
 # Current API
 
 The current API is implemented using FastAPI.
+
+The examples below use `jq` for readable JSON output.
 
 Start the development server:
 
@@ -587,7 +702,7 @@ http://127.0.0.1:8000
 ## Health Check
 
 ```bash
-curl http://127.0.0.1:8000/health
+curl -s http://127.0.0.1:8000/health | jq
 ```
 
 Expected response:
@@ -782,6 +897,40 @@ sequenceDiagram
 
 ---
 
+# Automated Security Tests
+
+Security behavior is covered by `pytest`.
+
+Current coverage includes:
+
+- approved and unauthorized AI models
+- approved and unauthorized network endpoints
+- financial data egress policy
+- secret-data restrictions
+- password and private-key detection
+- policy-bypass detection
+- system-prompt extraction attempts
+- clean runtime state
+- compromised runtime fail-closed behavior
+- normal versus critical policy violations
+- shutdown request state
+
+Current validated suite:
+
+```text
+22 passed
+```
+
+Run the complete suite with:
+
+```bash
+pytest -v
+```
+
+Security controls should be accompanied by deterministic tests whenever practical.
+
+---
+
 # Roadmap
 
 ## Phase 1 — Local Runtime
@@ -800,11 +949,14 @@ sequenceDiagram
 - [x] Approved local destination validation
 - [x] Sanitized security event logging
 - [x] Controlled policy exceptions
-- [ ] Data egress protection
-- [ ] Secret detection
-- [ ] Policy bypass detection
-- [ ] Automated security tests
-- [ ] Critical shutdown handling
+- [x] Data egress protection
+- [x] Secret detection
+- [x] Policy bypass detection
+- [x] Automated security tests
+- [x] Runtime compromise state
+- [x] Fail-closed behavior after critical violations
+- [x] Controlled shutdown request state
+- [ ] FastAPI/Uvicorn graceful shutdown lifecycle integration
 - [ ] Tool authorization policy
 
 ## Phase 3 — Financial Data
@@ -880,5 +1032,11 @@ The project should prefer explicit configuration over assumptions about the user
 
 # License
 
-We are not there yet but go with GNU :)
+Sherlock Home is licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
 
+You are free to use, study, modify, and redistribute this software under the terms of the GPLv3.
+
+Distributed derivative works must preserve the freedoms granted by the GPL and provide the corresponding source code under GPL-compatible terms.
+
+See the `LICENSE` file for the complete license text.
+ 
