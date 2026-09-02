@@ -963,18 +963,18 @@ Security controls should be accompanied by deterministic tests whenever practica
 - ✅ Runtime compromise state
 - ✅ Fail-closed behavior after critical violations
 - ✅ Controlled shutdown request state
-- ⏳ FastAPI/Uvicorn graceful shutdown lifecycle integration
-- ⬜ Tool authorization policy
+- ✅ FastAPI/Uvicorn graceful shutdown lifecycle integration
+- ✅ Tool authorization policy
 
 ## Phase 3 — Financial Data
 
-- ⬜ PostgreSQL or alternative local database
-- ⬜ Transaction schema
-- ⬜ CSV ingestion
-- ⬜ OFX ingestion
-- ⬜ Statement normalization
-- ⬜ Merchant normalization
-- ⬜ Expense categorization
+- ⏳ PostgreSQL or alternative local database
+- ⏳ Transaction schema
+- ⏳ CSV ingestion
+- ⏳ OFX ingestion
+- ⏳ Statement normalization
+- ⏳ Merchant normalization
+- ⏳ Expense categorization
 
 ## Phase 4 — Financial Tools
 

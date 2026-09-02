@@ -2,12 +2,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.api.routes import router
+from app.core.lifecycle import lifespan
 from app.core.security_enforcer import SecurityPolicyError
 
 
 app = FastAPI(
     title="Sherlock Home",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 

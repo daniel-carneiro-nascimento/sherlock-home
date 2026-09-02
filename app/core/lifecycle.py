@@ -3,19 +3,22 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.core.shutdown import wait_for_shutdown
+from app.core.shutdown_coordinator import shutdown_coordinator
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    shutdown_task = asyncio.create_task(wait_for_shutdown())
+    coordinator_task = asyncio.create_task(
+        shutdown_coordinator()
+    )
 
     try:
         yield
+
     finally:
-        shutdown_task.cancel()
+        coordinator_task.cancel()
 
         try:
-            await shutdown_task
+            await coordinator_task
         except asyncio.CancelledError:
             pass
