@@ -1,24 +1,25 @@
 import hashlib
-from datetime import date
-from decimal import Decimal
+
+from app.ingestion.normalization import (
+    CanonicalTransaction,
+)
 
 
 def build_transaction_fingerprint(
     *,
-    tx_date: date,
-    amount: Decimal,
-    description: str,
-    document: str | None,
-    statement_month: date,
+    transaction: CanonicalTransaction,
     occurrence: int,
 ) -> str:
     canonical = "|".join(
         [
-            tx_date.isoformat(),
-            format(amount, "f"),
-            " ".join(description.split()),
-            document.strip() if document else "",
-            statement_month.isoformat(),
+            transaction.transaction_date.isoformat(),
+            format(transaction.amount, "f"),
+            transaction.original_description,
+            transaction.document or "",
+            transaction.statement_month.isoformat(),
+            transaction.source,
+            transaction.source_type,
+            transaction.source_account or "",
             str(occurrence),
         ]
     )

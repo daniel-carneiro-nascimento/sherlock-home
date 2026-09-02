@@ -1,66 +1,102 @@
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
 from app.ingestion.fingerprint import (
     build_transaction_fingerprint,
 )
+from app.ingestion.normalization import (
+    CanonicalTransaction,
+)
 
 
-def test_same_transaction_same_fingerprint():
-    kwargs = {
-        "tx_date": date(2026, 6, 11),
-        "amount": Decimal("-149.29"),
-        "description": "PIX ENVIADO MERCHANT TEST",
-        "document": None,
-        "statement_month": date(2026, 6, 1),
-        "occurrence": 1,
-    }
+def make_transaction(
+    *,
+    amount: Decimal = Decimal("-10.00"),
+    description: str = "MERCHANT TEST",
+) -> CanonicalTransaction:
+    return CanonicalTransaction(
+        transaction_date=date(2026, 6, 11),
+        amount=amount,
+        original_description=description,
+        document=None,
+        statement_month=date(2026, 6, 1),
+        source="santander",
+        source_type="bank_statement",
+        source_account="synthetic-account",
+    )
+
+
+def test_same_input_produces_same_fingerprint():
+    tx = make_transaction()
 
     assert (
-        build_transaction_fingerprint(**kwargs)
-        == build_transaction_fingerprint(**kwargs)
+        build_transaction_fingerprint(
+            transaction=tx,
+            occurrence=1,
+        )
+        ==
+        build_transaction_fingerprint(
+            transaction=tx,
+            occurrence=1,
+        )
     )
 
 
-def test_whitespace_does_not_change_fingerprint():
-    common = {
-        "tx_date": date(2026, 6, 11),
-        "amount": Decimal("-149.29"),
-        "document": None,
-        "statement_month": date(2026, 6, 1),
-        "occurrence": 1,
-    }
+def test_different_occurrence_changes_fingerprint():
+    tx = make_transaction()
 
-    first = build_transaction_fingerprint(
-        description="PIX   ENVIADO   TEST",
-        **common,
+    assert (
+        build_transaction_fingerprint(
+            transaction=tx,
+            occurrence=1,
+        )
+        !=
+        build_transaction_fingerprint(
+            transaction=tx,
+            occurrence=2,
+        )
     )
 
-    second = build_transaction_fingerprint(
-        description="PIX ENVIADO TEST",
-        **common,
+
+def test_different_amount_changes_fingerprint():
+    tx1 = make_transaction(
+        amount=Decimal("-10.00")
     )
 
-    assert first == second
-
-
-def test_occurrence_distinguishes_identical_transactions():
-    common = {
-        "tx_date": date(2026, 6, 11),
-        "amount": Decimal("-50.00"),
-        "description": "PIX ENVIADO TEST",
-        "document": None,
-        "statement_month": date(2026, 6, 1),
-    }
-
-    first = build_transaction_fingerprint(
-        occurrence=1,
-        **common,
+    tx2 = make_transaction(
+        amount=Decimal("-20.00")
     )
 
-    second = build_transaction_fingerprint(
-        occurrence=2,
-        **common,
+    assert (
+        build_transaction_fingerprint(
+            transaction=tx1,
+            occurrence=1,
+        )
+        !=
+        build_transaction_fingerprint(
+            transaction=tx2,
+            occurrence=1,
+        )
     )
 
-    assert first != second
+
+def test_different_source_account_changes_fingerprint():
+    tx1 = make_transaction()
+
+    tx2 = replace(
+        tx1,
+        source_account="another-account",
+    )
+
+    assert (
+        build_transaction_fingerprint(
+            transaction=tx1,
+            occurrence=1,
+        )
+        !=
+        build_transaction_fingerprint(
+            transaction=tx2,
+            occurrence=1,
+        )
+    ) 
