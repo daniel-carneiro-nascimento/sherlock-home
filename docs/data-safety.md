@@ -88,3 +88,28 @@ POSTGRES_TEST_DB=sherlock_home_test
 Only the disposable test database may be cleaned automatically between tests.
 
 This protects locally imported financial records from accidental deletion during pytest execution.
+
+
+## Web configuration and rule persistence
+
+The planned household web interface will not require users to edit `.env` files for financial categorization behavior.
+
+User-managed deterministic configuration is stored locally in PostgreSQL:
+
+```text
+merchant_aliases
+category_rules
+```
+
+The future API must preserve the same security model already used elsewhere:
+
+- authenticate and authorize configuration changes
+- validate category and rule-field values
+- validate regex input before persistence/use
+- preserve deterministic priority ordering
+- keep rule data inside the approved local environment
+- audit protected configuration changes
+- never expose database credentials to the browser or LLM
+
+The database remains directly accessible only to deterministic application components.
+

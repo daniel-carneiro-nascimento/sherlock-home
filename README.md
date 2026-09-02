@@ -2,6 +2,8 @@
 
 Sherlock Home is a local-first AI agent for personal finance analysis.
 
+Current milestone: **v0.5.0 — deterministic financial ingestion and configurable local enrichment**.
+
 Its purpose is to help users understand household spending, credit card usage, recurring expenses, cash flow, and financial behavior while keeping protected financial and personal data inside an explicitly approved local environment.
 
 Sherlock Home is designed to be environment-agnostic.
@@ -213,12 +215,17 @@ sherlock-home/
 │   │   ├── santander_pdf.py
 │   │   └── transaction_typing.py
 │   ├── models/
+│   │   ├── category_rule.py
+│   │   ├── merchant_alias.py
 │   │   └── transaction.py
 │   ├── rules/
 │   │   ├── __init__.py
 │   │   ├── categories.py
 │   │   └── transaction_types.py
 │   ├── services/
+│   │   ├── category_rules.py
+│   │   ├── financial_pipeline.py
+│   │   ├── merchant_aliases.py
 │   │   ├── ollama.py
 │   │   └── project_context.py
 │   ├── tools/
@@ -243,10 +250,13 @@ sherlock-home/
 │   ├── security/
 │   ├── conftest.py
 │   ├── test_category_rules.py
+│   ├── test_category_rules_db.py
 │   ├── test_database_fixture.py
 │   ├── test_expense_categorization.py
+│   ├── test_financial_pipeline.py
 │   ├── test_fingerprint.py
 │   ├── test_importer.py
+│   ├── test_local_category_rules.py
 │   ├── test_merchant_normalization.py
 │   ├── test_normalization.py
 │   ├── test_santander_pdf.py
@@ -424,9 +434,13 @@ statement normalization
     ↓
 CanonicalStatement / CanonicalTransaction
     ↓
+load active merchant aliases from PostgreSQL
+    ↓
 merchant normalization
     ↓
 transaction typing
+    ↓
+load active category rules from PostgreSQL
     ↓
 expense categorization
     ↓
@@ -463,6 +477,34 @@ Detailed documentation:
 - **[Santander parser](docs/parsers/santander.md)**
 - **[Data safety](docs/data-safety.md)**
 - **[Testing](docs/testing.md)**
+
+---
+
+
+## Runtime Financial Configuration
+
+Starting with **v0.5.0**, user-editable financial enrichment rules are persisted locally in PostgreSQL rather than being treated as environment configuration.
+
+Runtime configuration currently includes:
+
+```text
+merchant_aliases
+category_rules
+```
+
+Both tables support deterministic priority ordering and enabled/disabled state.
+
+The application runtime uses:
+
+```text
+app/services/financial_pipeline.py
+```
+
+to load active PostgreSQL rules and apply the enrichment sequence consistently.
+
+`.env` remains for operational deployment configuration such as database connectivity, local AI endpoints, and runtime settings. It is not intended to be the future household-user configuration interface.
+
+The planned web UI will manage local financial rules through the application API while PostgreSQL remains the persistent configuration source.
 
 ---
 
@@ -516,9 +558,14 @@ Current coverage includes:
 - canonical statement normalization
 - normalization invariants
 - merchant normalization
+- deterministic merchant aliases
+- PostgreSQL-backed merchant alias loading
 - deterministic merchant extraction and conservative unknown handling
 - transaction-type taxonomy and deterministic typing
 - expense-category taxonomy and explicit rule priorities
+- optional local YAML category-rule loading
+- PostgreSQL-backed configurable category rules
+- runtime financial enrichment pipeline
 - expense-only categorization
 - transaction fingerprint invariants
 - idempotent statement import
@@ -529,7 +576,7 @@ Current coverage includes:
 Current validated suite:
 
 ```text
-122 passed
+152 passed
 ```
 
 Run the complete suite with:
@@ -551,6 +598,27 @@ Security controls and financial invariants should be accompanied by deterministi
 ---
 
 # Roadmap
+
+### v0.5.0 checkpoint
+
+Phase 3 financial ingestion and deterministic enrichment is complete for the current Santander path.
+
+```text
+✓ deterministic Santander parsing
+✓ canonical statement normalization
+✓ merchant normalization
+✓ merchant aliases
+✓ transaction typing
+✓ expense taxonomy
+✓ expense categorization
+✓ configurable local category rules
+✓ PostgreSQL-backed runtime rules
+✓ deterministic fingerprinting
+✓ idempotent persistence
+✓ isolated PostgreSQL integration testing
+```
+
+
 
 ## Phase 1 — Local Runtime
 

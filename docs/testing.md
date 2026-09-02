@@ -227,6 +227,55 @@ In this case, exact taxonomy strings are valid fixed expectations because the ta
 
 ---
 
+## PostgreSQL Rule Configuration Tests
+
+The v0.5.0 suite validates persistent financial enrichment configuration.
+
+Relevant tests cover:
+
+```text
+category rule persistence
+merchant alias persistence
+enabled/disabled filtering
+priority ordering
+database rule override behavior
+runtime pipeline integration
+```
+
+The tests use only the isolated `sherlock_home_test` database.
+
+The `db_session` fixture cleans all mutable integration-test tables before and after each test:
+
+```text
+transactions
+category_rules
+merchant_aliases
+```
+
+This prevents one test's persisted rules from affecting the next test and preserves the fail-closed boundary protecting the normal application database.
+
+---
+
+## Runtime Financial Pipeline Tests
+
+`tests/test_financial_pipeline.py` verifies that the production-oriented orchestration layer actually consumes PostgreSQL configuration.
+
+The tests establish that:
+
+- merchant aliases stored in PostgreSQL affect merchant normalization
+- category rules stored in PostgreSQL affect expense categorization
+- database rules can deterministically override broader defaults through priority
+- disabled rules are ignored
+- Santander parser output can pass through the complete runtime enrichment path
+- income remains uncategorized
+- derived fields preserve the source financial data
+
+The importer integration test uses the same runtime preparation service rather than assembling enrichment stages independently.
+
+This is important because the tested pipeline and the intended application pipeline now share the same orchestration boundary.
+
+---
+
 ## Fingerprint Tests
 
 `tests/test_fingerprint.py` verifies deterministic transaction identity.
@@ -406,6 +455,14 @@ Database fixture tests
     ↓
 test-database isolation and fail-closed safety
 
+PostgreSQL rule tests
+    ↓
+persistent aliases, categories, priorities, enabled state
+
+Runtime financial pipeline tests
+    ↓
+production-oriented deterministic orchestration
+
 Fingerprint tests
     ↓
 identity relationships
@@ -418,7 +475,7 @@ persistence and idempotency
 At the current checkpoint, the complete suite passes:
 
 ```text
-122 passed
+152 passed
 ```
 
 Run the suite with:

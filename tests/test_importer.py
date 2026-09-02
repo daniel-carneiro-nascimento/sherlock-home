@@ -3,20 +3,14 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.ingestion.expense_categorization import (
-    categorize_statement_expenses,
-)
 from app.ingestion.importer import import_statement
-from app.ingestion.merchant_normalization import (
-    normalize_statement_merchants,
-)
-from app.ingestion.normalization import (
-    normalize_santander_statement,
-)
 from app.ingestion.santander_pdf import (
     parse_statement,
 )
 from app.models.transaction import Transaction
+from app.services.financial_pipeline import (
+    prepare_santander_statement,
+)
 
 
 FIXTURE = (
@@ -35,17 +29,10 @@ def test_import_is_idempotent(
 
     parsed = parse_statement(text)
 
-    statement = normalize_santander_statement(
+    statement = prepare_santander_statement(
+        db_session,
         parsed,
         source_account="synthetic-account",
-    )
-
-    statement = normalize_statement_merchants(
-        statement
-    )
-
-    statement = categorize_statement_expenses(
-        statement
     )
 
     expected_count = len(
@@ -103,6 +90,21 @@ def test_import_is_idempotent(
         == expected_categories
     )
 
+    expected_transaction_types = [
+        transaction.transaction_type
+        for transaction in statement.transactions
+    ]
+
+    stored_transaction_types = [
+        transaction.transaction_type
+        for transaction in stored_transactions
+    ]
+
+    assert (
+        stored_transaction_types
+        == expected_transaction_types
+    )
+
     inserted, skipped = import_statement(
         db_session,
         statement,
@@ -118,4 +120,4 @@ def test_import_is_idempotent(
     assert (
         len(stored_transactions)
         == expected_count
-    ) 
+    )

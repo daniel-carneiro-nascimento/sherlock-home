@@ -13,9 +13,11 @@ flowchart TD
     PARSED --> CHECK[Parser sanity checks]
     CHECK --> NORMALIZE[Statement normalization]
     NORMALIZE --> CANON[CanonicalStatement / CanonicalTransaction]
-    CANON --> MERCHANT[Merchant normalization]
+    CANON --> MALIAS[(PostgreSQL merchant aliases)]
+    MALIAS --> MERCHANT[Merchant normalization]
     MERCHANT --> TYPE[Transaction typing]
-    TYPE --> CATEGORY[Expense categorization]
+    TYPE --> CRULES[(PostgreSQL category rules)]
+    CRULES --> CATEGORY[Expense categorization]
     CATEGORY --> FP[Transaction fingerprint]
     FP --> IMPORT[Idempotent importer]
     IMPORT --> DB[(Local PostgreSQL)]
@@ -135,3 +137,68 @@ flowchart LR
 ```
 
 The parser boundary is deliberate. If one bank changes its export format, the expected change surface is that bank's parser plus its synthetic fixtures and parser tests. Merchant normalization, transaction typing, categorization, fingerprinting, and persistence remain generic downstream stages.
+
+
+## Runtime enrichment service
+
+The v0.5.0 runtime path centralizes enrichment in:
+
+```text
+app/services/financial_pipeline.py
+```
+
+The service exposes a single deterministic orchestration boundary for canonical statements.
+
+```text
+ParsedStatement
+    ↓
+normalize_santander_statement()
+    ↓
+load_merchant_aliases_from_db()
+    ↓
+normalize_statement_merchants()
+    ↓
+classify_statement_transactions()
+    ↓
+load_category_rules_from_db()
+    ↓
+categorize_statement_expenses()
+    ↓
+CanonicalStatement ready for fingerprint/import
+```
+
+This prevents individual callers from needing to manually assemble `rules=` arguments.
+
+### Merchant aliases
+
+Active merchant aliases are loaded from PostgreSQL in priority order.
+
+An alias may convert source variants such as:
+
+```text
+SYNTHETIC MARKET *1234
+SYNTHETIC MARKET *5678
+```
+
+into one canonical merchant:
+
+```text
+SYNTHETIC MARKET
+```
+
+Unmatched merchants remain unchanged; the application does not invent an alias.
+
+### Category rules
+
+Default deterministic rules remain available in code.
+
+Enabled PostgreSQL category rules are merged into the active rule set and ordered by explicit priority. A lower-priority-number local rule can intentionally override a broader default rule.
+
+Disabled database rules are ignored.
+
+### Optional YAML rules
+
+Local YAML category-rule loading remains supported as a deterministic import/bootstrap mechanism. It is not the intended interactive runtime configuration interface.
+
+The future local web UI will manage PostgreSQL-backed rules through API endpoints.
+

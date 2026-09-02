@@ -123,3 +123,74 @@ The pytest fixtures in `tests/conftest.py` fail closed if the test database matc
 The test database is disposable and may be cleaned between tests. The normal application database must never be reset by the test suite.
 
 Schema changes to the application database continue to use Alembic. The disposable test database is created from SQLAlchemy metadata for test execution.
+
+
+## Runtime configuration tables
+
+v0.5.0 adds persistent deterministic rule configuration to PostgreSQL.
+
+### `merchant_aliases`
+
+Stores locally managed merchant canonicalization rules.
+
+Conceptual fields:
+
+```text
+id
+canonical_name
+pattern
+priority
+enabled
+```
+
+`priority` is unique so rule ordering is deterministic. Disabled rules remain persisted but are ignored by the runtime loader.
+
+### `category_rules`
+
+Stores locally managed expense-category rules.
+
+Conceptual fields:
+
+```text
+id
+category
+field
+pattern
+priority
+enabled
+```
+
+The service validates the persisted category and rule field against the canonical enums before compiling the regex.
+
+### Runtime loaders
+
+```text
+app/services/merchant_aliases.py
+app/services/category_rules.py
+```
+
+read enabled rows in deterministic priority order.
+
+The orchestration service:
+
+```text
+app/services/financial_pipeline.py
+```
+
+uses those loaders before merchant normalization and expense categorization.
+
+These tables are intended to become the persistence layer behind the local web configuration UI.
+
+## Configuration boundary
+
+`.env` is reserved for operational configuration:
+
+```text
+database connectivity
+local AI runtime
+application environment
+service endpoints
+```
+
+Household financial rules and aliases are persisted in PostgreSQL. They are not expected to require direct `.env` editing.
+

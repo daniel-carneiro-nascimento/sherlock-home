@@ -74,6 +74,8 @@ Merchant normalization
 Transaction typing
 Expense categorization
 Deterministic taxonomy/rule engine
+PostgreSQL-backed rule configuration
+Runtime financial enrichment service
 Idempotent transaction importer
 Isolated PostgreSQL test database
 Automated test suite
@@ -875,7 +877,7 @@ They verify:
 The current checkpoint has a fully passing automated suite:
 
 ```text
-122 passed
+152 passed
 ```
 
 Tests should be added whenever a security rule, parser behavior, normalization rule, fingerprint identity rule, persistence invariant, or financial invariant is introduced.
@@ -899,6 +901,7 @@ sequenceDiagram
     participant Extract as pdftotext -layout
     participant Parser as Santander Parser
     participant Normalize as Statement Normalizer
+    participant Rules as PostgreSQL Rule Store
     participant Merchant as Merchant Normalizer
     participant Type as Transaction Typing
     participant Category as Expense Categorizer
@@ -914,9 +917,13 @@ sequenceDiagram
     Parser->>Parser: Parse transactions
     Parser->>Normalize: ParsedStatement
     Normalize->>Normalize: Build canonical transactions
-    Normalize->>Merchant: CanonicalStatement
+    Normalize->>Rules: Load enabled merchant aliases
+    Rules-->>Normalize: Ordered alias rules
+    Normalize->>Merchant: CanonicalStatement + alias rules
     Merchant->>Type: Merchant-enriched transactions
-    Type->>Category: Typed transactions
+    Type->>Rules: Load enabled category rules
+    Rules-->>Type: Ordered category rules
+    Type->>Category: Typed transactions + category rules
     Category->>Validate: Expense-categorized transactions
     Validate->>FP: Valid canonical transactions
     FP->>Import: Fingerprinted transactions
@@ -967,6 +974,11 @@ app/rules/transaction_types.py
 app/rules/categories.py
 app/ingestion/fingerprint.py
 app/ingestion/importer.py
+app/models/category_rule.py
+app/models/merchant_alias.py
+app/services/category_rules.py
+app/services/merchant_aliases.py
+app/services/financial_pipeline.py
 ```
 
 ---
@@ -1018,8 +1030,9 @@ parsers/
 The next financial-data stages include:
 
 ```text
+rule-management API
+local web configuration UI
 merchant alias expansion
-configurable local category rules
 additional bank parsers
 CSV ingestion
 OFX ingestion

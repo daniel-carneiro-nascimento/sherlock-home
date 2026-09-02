@@ -1,5 +1,7 @@
 # Sherlock Home Documentation
 
+Current documented milestone: **v0.5.0**.
+
 This directory contains implementation-oriented documentation for Sherlock Home.
 
 The root `README.md` describes the project at a high level. The files here document specific subsystems and flows so that implementation details can evolve without turning the project README into a monolith.
@@ -7,8 +9,8 @@ The root `README.md` describes the project at a high level. The files here docum
 ## Documentation map
 
 - [`architecture.md`](architecture.md) — overall architecture and design principles.
-- [`financial-data-flow.md`](financial-data-flow.md) — current parser, canonical normalization, merchant normalization, transaction typing, expense categorization, fingerprint, and persistence flow.
-- [`database.md`](database.md) — local PostgreSQL, SQLAlchemy, Alembic, transaction schema, derived fields, test-database isolation, fingerprints, and idempotency.
+- [`financial-data-flow.md`](financial-data-flow.md) — current parser, canonical normalization, PostgreSQL-backed merchant/category enrichment, transaction typing, fingerprint, and persistence flow.
+- [`database.md`](database.md) — local PostgreSQL, SQLAlchemy, Alembic, transaction schema, runtime rule tables, test-database isolation, fingerprints, and idempotency.
 - [`data-safety.md`](data-safety.md) — handling rules for real financial statements and extracted text.
 - [`testing.md`](testing.md) — behavior-oriented tests, taxonomy/rule tests, database isolation, integration tests, and safety rules.
 - [`parsers/README.md`](parsers/README.md) — parser architecture and the contract for bank-specific parsers.
@@ -38,3 +40,8 @@ fingerprint / idempotent persistence
 ```
 
 `transaction_type` and `category` are deliberately separate. `expense`, `income`, and `transfer` describe movement nature; expense categories describe spending purpose.
+
+
+## Releases
+
+- [`releases/v0.5.0.md`](releases/v0.5.0.md) — deterministic financial ingestion and PostgreSQL-backed local enrichment checkpoint.
