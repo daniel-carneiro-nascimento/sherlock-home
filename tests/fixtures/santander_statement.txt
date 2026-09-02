@@ -1,0 +1,22 @@
+TEST  FILE   TEST FILE TEST  FILE   TEST FILE TEST  FILE   TEST FILE TEST  FILE   TEST FILE TEST  FILE   TEST FILE                                                                                                                    EXTRATO CONSOLIDADO INTELIGENTE
+                                                                                                                                          junho/2026
+
+
+                                                                                                                   EXTRATO CONSOLIDADO INTELIGENTE
+                                                                                                                                          junho/2026
+
+
+Movimentação
+Data        Descrição                                                                             Nº Documento                              Movimento (R$)                       Saldo (R$)
+09/06       COMPRA CARTAO DEB MC                                                                       000001                                         23,50-                       79,52-
+            09/06 MERCHANT TEST
+10/06       PAGAMENTO DE BOLETO                                                                        0000002                                        139,90-                       219,42-
+            COMPANY TEST
+11/06       PIX ENVIADO Pix Marketplace                                                                    -                                         298,00-
+            PIX ENVIADO                                                                                    -                                         149,29-                       666,71-
+            MERCHANT TEST CONTINUATION
+
+             Conta Corrente                    Bloqueio            Bloqueado                  Bloqueio               Encargos*         Investimentos com                         Disponível
+
+                   Débito Automático em Conta Corrente
+TEST  FILE   TEST FILE TEST  FILE   TEST FILE TEST  FILE   TEST FILE TEST  FILE   TEST FILE TEST  FILE   TEST FILE 
