@@ -337,6 +337,9 @@ app/core/secret_detector.py
 app/core/policy_bypass.py
 app/core/runtime_state.py
 app/core/shutdown.py
+app/core/shutdown_coordinator.py
+app/core/lifecycle.py
+app/core/tool_policy.py
 ```
 
 ## `security.py`
@@ -455,7 +458,7 @@ Tracks whether the current runtime is considered safe or compromised. A critical
 
 ## `shutdown.py`
 
-Maintains a controlled shutdown request state. Critical violations may request a graceful shutdown without directly killing the process from arbitrary enforcement code. Full FastAPI/Uvicorn lifecycle integration is still planned.
+Maintains a controlled shutdown request state. Critical violations may request a graceful shutdown without directly killing the process from arbitrary enforcement code. `shutdown_coordinator.py` and `lifecycle.py` integrate that request with the FastAPI/Uvicorn lifespan so the process can terminate through a controlled `SIGTERM` path.
 
 ---
 
@@ -472,6 +475,8 @@ Current and planned rules include:
 | `SH-DATA-001` | Unauthorized external transmission of protected data |
 | `SH-SECRET-001` | Secret or credential exposure |
 | `SH-POLICY-001` | Attempt to bypass or override security policy |
+| `SH-TOOL-001` | Unauthorized tool |
+| `SH-TOOL-002` | Tool permission not allowed |
 
 Additional rules may be added as the project evolves.
 
@@ -633,6 +638,8 @@ It is not defined only by physical location or network address.
 
 ```text
 sherlock-home/
+├── alembic/
+│   └── versions/
 ├── app/
 │   ├── api/
 │   ├── agents/
@@ -640,16 +647,25 @@ sherlock-home/
 │   │   ├── audit.py
 │   │   ├── config.py
 │   │   ├── data_policy.py
+│   │   ├── lifecycle.py
 │   │   ├── network_policy.py
 │   │   ├── policy_bypass.py
 │   │   ├── runtime_state.py
 │   │   ├── secret_detector.py
 │   │   ├── security.py
 │   │   ├── security_enforcer.py
-│   │   └── shutdown.py
+│   │   ├── shutdown.py
+│   │   ├── shutdown_coordinator.py
+│   │   └── tool_policy.py
 │   ├── db/
+│   │   ├── base.py
+│   │   └── database.py
 │   ├── ingestion/
+│   │   ├── fingerprint.py
+│   │   ├── importer.py
+│   │   └── santander_pdf.py
 │   ├── models/
+│   │   └── transaction.py
 │   ├── services/
 │   │   ├── ollama.py
 │   │   └── project_context.py
@@ -661,18 +677,26 @@ sherlock-home/
 │   ├── processed/
 │   └── samples/
 ├── docs/
-│   └── architecture.md
-├── infra/
-├── logs/
-├── scripts/
+│   ├── README.md
+│   ├── architecture.md
+│   ├── data-safety.md
+│   ├── database.md
+│   ├── financial-data-flow.md
+│   ├── testing.md
+│   └── parsers/
+│       ├── README.md
+│       └── santander.md
 ├── tests/
-│   └── security/
-│       ├── test_runtime_state.py
-│       ├── test_security.py
-│       └── test_shutdown.py
+│   ├── fixtures/
+│   ├── security/
+│   ├── test_fingerprint.py
+│   ├── test_importer.py
+│   └── test_santander_pdf.py
 ├── .env.example
 ├── .gitignore
+├── alembic.ini
 ├── docker-compose.yml
+├── LICENSE.md
 ├── pyproject.toml
 └── README.md
 ```
@@ -803,51 +827,89 @@ Git is intended for:
 
 Git is not intended as storage for protected financial records.
 
+Text extracted from a real bank PDF is still protected financial data. It must remain outside tracked repository paths or inside explicitly ignored local data directories. See `docs/data-safety.md`.
+
 ---
 
-# Planned Financial Architecture
+# Documentation
+
+Detailed implementation and operating notes live under `docs/`:
+
+- `docs/financial-data-flow.md` — implemented financial ingestion pipeline
+- `docs/database.md` — PostgreSQL, SQLAlchemy, Alembic, schema, and idempotency
+- `docs/parsers/README.md` — parser architecture and bank-specific isolation
+- `docs/parsers/santander.md` — Santander PDF parser behavior
+- `docs/testing.md` — synthetic fixtures and deterministic testing
+- `docs/data-safety.md` — rules for handling real statements and extracted text
+- `docs/architecture.md` — broader project architecture
+
+Bank-specific parsers are intentionally isolated. If one bank changes its statement layout, its parser can evolve without forcing unrelated bank parsers or the canonical transaction layer to change.
+
+---
+
+# Current Financial Data Architecture
+
+The first end-to-end financial ingestion path is implemented for Santander PDF statements with a text layer.
 
 ```mermaid
 flowchart TD
+    PDF[Real Santander PDF - local only]
+    PDF --> POPPLER[pdftotext -layout]
+    POPPLER --> TXT[Local extracted text]
+    TXT --> PARSER[Bank-specific Santander parser]
+    PARSER --> PERIOD[Extract statement month]
+    PARSER --> SECTION[Isolate Movimentação section]
+    SECTION --> RECORDS[Parsed transactions]
+    RECORDS --> SANITY[Deterministic sanity checks]
+    SANITY --> FP[SHA-256 transaction fingerprint]
+    FP --> IMPORTER[Idempotent importer]
+    IMPORTER --> DB[(Local PostgreSQL)]
+```
 
-    FILES[Bank / Credit Card Statements]
+Implemented properties:
 
-    FILES --> INGEST[Local Ingestion]
+- PostgreSQL runs locally and is bound to `127.0.0.1` in the reference Docker Compose setup.
+- SQLAlchemy 2 provides the application data layer.
+- Alembic manages schema migrations.
+- Financial amounts use decimal database types and Python `Decimal`, not binary floating point.
+- Santander statement parsing is deterministic and isolated in `app/ingestion/santander_pdf.py`.
+- The parser derives the statement period from the document header and handles Brazilian monetary notation, including trailing minus signs.
+- Repeated table headers and non-transaction statement sections are excluded from the movement block.
+- Parsed descriptions are guarded by sanity checks before persistence.
+- Transaction fingerprints provide idempotent re-import behavior.
+- A repeated import skips previously imported records instead of duplicating them.
 
-    INGEST --> NORMALIZE[Transaction Normalization]
+Current canonical transaction fields include date, amount, statement month, original description, optional merchant/card/category/installment fields, creation time, and a unique fingerprint. Merchant/category/card enrichment remains a later normalization step.
 
-    NORMALIZE --> DB[(Local Database)]
+The intended multi-bank architecture is:
 
+```mermaid
+flowchart TD
+    SANTANDER[Santander PDF] --> SP[Parser: Santander]
+    BANKB[Bank B CSV/PDF/OFX] --> BP[Parser: Bank B]
+    BANKC[Bank C CSV/PDF/OFX] --> CP[Parser: Bank C]
+
+    SP --> CANON[Canonical Parsed Statement]
+    BP --> CANON
+    CP --> CANON
+
+    CANON --> NORMALIZE[Statement / Merchant Normalization]
+    NORMALIZE --> DB[(Local PostgreSQL)]
     DB --> TOOLS[Deterministic Financial Tools]
-
     TOOLS --> POLICY[Security Policy]
-
     POLICY --> AGENT[Sherlock Home Agent]
-
     AGENT --> LLM[Approved Local LLM]
-
-    LLM --> AGENT
-
-    AGENT --> API[FastAPI]
-
-    API --> UI[Local UI]
 ```
 
 Potential deterministic tools include:
 
 ```text
 get_monthly_spending()
-
 get_credit_card_statement()
-
 get_category_total()
-
 compare_months()
-
 find_recurring_expenses()
-
 forecast_cash_flow()
-
 detect_spending_anomalies()
 ```
 
@@ -914,11 +976,17 @@ Current coverage includes:
 - compromised runtime fail-closed behavior
 - normal versus critical policy violations
 - shutdown request state
+- graceful shutdown coordinator integration
+- tool authorization policy
+- Santander statement parsing
+- Brazilian monetary parsing
+- transaction fingerprint stability
+- idempotent statement import
 
 Current validated suite:
 
 ```text
-22 passed
+35 passed
 ```
 
 Run the complete suite with:
@@ -933,83 +1001,81 @@ Security controls should be accompanied by deterministic tests whenever practica
 
 # Roadmap
 
-### Legend
-
-- ✅ Completed
-- ⏳ In progress
-- ⬜ Planned / pending
-
-
 ## Phase 1 — Local Runtime
 
-- ✅ Local LLM runtime
-- ✅ Local inference validated
-- ✅ Ollama integration
-- ✅ Qwen3 integration
-- ✅ FastAPI
-- ✅ Local project context
-- ✅ Deterministic security enforcement
+- [x] Local LLM runtime
+- [x] Local inference validated
+- [x] Ollama integration
+- [x] Qwen3 integration
+- [x] FastAPI
+- [x] Local project context
+- [x] Deterministic security enforcement
 
 ## Phase 2 — Security
 
-- ✅ Approved model validation
-- ✅ Approved local destination validation
-- ✅ Sanitized security event logging
-- ✅ Controlled policy exceptions
-- ✅ Data egress protection
-- ✅ Secret detection
-- ✅ Policy bypass detection
-- ✅ Automated security tests
-- ✅ Runtime compromise state
-- ✅ Fail-closed behavior after critical violations
-- ✅ Controlled shutdown request state
-- ✅ FastAPI/Uvicorn graceful shutdown lifecycle integration
-- ✅ Tool authorization policy
+- [x] Approved model validation
+- [x] Approved local destination validation
+- [x] Sanitized security event logging
+- [x] Controlled policy exceptions
+- [x] Data egress protection
+- [x] Secret detection
+- [x] Policy bypass detection
+- [x] Automated security tests
+- [x] Runtime compromise state
+- [x] Fail-closed behavior after critical violations
+- [x] Controlled shutdown request state
+- [x] FastAPI/Uvicorn graceful shutdown lifecycle integration
+- [x] Tool authorization policy
 
 ## Phase 3 — Financial Data
 
-- ⏳ PostgreSQL or alternative local database
-- ⏳ Transaction schema
-- ⏳ CSV ingestion
-- ⏳ OFX ingestion
-- ⏳ Statement normalization
-- ⏳ Merchant normalization
-- ⏳ Expense categorization
+- [x] PostgreSQL local database
+- [x] SQLAlchemy integration
+- [x] Alembic migrations
+- [x] Transaction schema
+- [x] Santander PDF statement ingestion
+- [x] Transaction fingerprinting
+- [x] Idempotent statement import
+- [ ] CSV ingestion
+- [ ] OFX ingestion
+- [ ] Statement normalization
+- [ ] Merchant normalization
+- [ ] Expense categorization
 
 ## Phase 4 — Financial Tools
 
-- ⬜ Monthly spending
-- ⬜ Category spending
-- ⬜ Recurring expenses
-- ⬜ Cash-flow analysis
-- ⬜ Spending comparison
-- ⬜ Anomaly detection
+- [ ] Monthly spending
+- [ ] Category spending
+- [ ] Recurring expenses
+- [ ] Cash-flow analysis
+- [ ] Spending comparison
+- [ ] Anomaly detection
 
 ## Phase 5 — Agentic Layer
 
-- ⬜ Tool dispatcher
-- ⬜ Deterministic tool execution
-- ⬜ Structured tool responses
-- ⬜ Agent reasoning
-- ⬜ Financial workflows
-- ⬜ Tool permission boundaries
+- [ ] Tool dispatcher
+- [ ] Deterministic tool execution
+- [ ] Structured tool responses
+- [ ] Agent reasoning
+- [ ] Financial workflows
+- [ ] Tool permission boundaries
 
 ## Phase 6 — Local Retrieval
 
-- ⬜ Local embeddings
-- ⬜ Local vector storage
-- ⬜ Financial document retrieval
-- ⬜ Selective context injection
-- ⬜ Retrieval security controls
+- [ ] Local embeddings
+- [ ] Local vector storage
+- [ ] Financial document retrieval
+- [ ] Selective context injection
+- [ ] Retrieval security controls
 
 ## Phase 7 — User Interface
 
-- ⬜ Local dashboard
-- ⬜ Financial charts
-- ⬜ Natural-language query interface
-- ⬜ Monthly reports
-- ⬜ Alerts
-- ⬜ Financial insights
+- [ ] Local dashboard
+- [ ] Financial charts
+- [ ] Natural-language query interface
+- [ ] Monthly reports
+- [ ] Alerts
+- [ ] Financial insights
 
 ---
 
@@ -1045,5 +1111,4 @@ You are free to use, study, modify, and redistribute this software under the ter
 
 Distributed derivative works must preserve the freedoms granted by the GPL and provide the corresponding source code under GPL-compatible terms.
 
-See the `LICENSE` file for the complete license text.
- 
+See `LICENSE.md` for the complete license text.
