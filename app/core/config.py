@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     ollama_host: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen3:14b"
 
+    postgres_host: str = "127.0.0.1"
+    postgres_port: int = 5432
+    postgres_db: str = "sherlock_home"
+    postgres_user: str = "sherlock"
+    postgres_password: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
