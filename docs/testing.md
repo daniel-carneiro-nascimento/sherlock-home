@@ -276,8 +276,44 @@ This is important because the tested pipeline and the intended application pipel
 
 ---
 
-## Fingerprint Tests
+## Financial Analysis Tests
 
+`tests/test_financial_analysis.py` validates the complete deterministic Phase 5 analysis layer in `app/services/financial_analysis.py`.
+
+Coverage includes:
+
+```text
+monthly spending
+category spending
+spending comparison
+recurring-expense detection
+cash-flow analysis
+deterministic anomaly detection
+```
+
+Important invariants include:
+
+- only expense transactions contribute to spending totals
+- income and transfer movements are excluded from spending
+- transfers remain separate from household net cash flow
+- analytical spending totals are positive magnitudes while persisted source signs remain unchanged
+- `Decimal` precision is preserved
+- month and date-range boundaries use deterministic half-open intervals
+- uncategorized expenses remain `category=None`
+- zero-reference spending comparison returns `percentage_difference=None`
+- recurring-expense detection uses explicit occurrence, interval, and amount-tolerance rules
+- recurrence prefers normalized merchant and falls back to normalized original description
+- anomaly detection uses prior merchant history and falls back to category history
+- insufficient history does not produce a guessed anomaly
+- invalid ranges and configuration values fail deterministically
+
+All financial-analysis test transactions are synthetic and use the isolated PostgreSQL test database.
+
+No LLM participates in these calculations or expectations.
+
+---
+
+## Fingerprint Tests
 `tests/test_fingerprint.py` verifies deterministic transaction identity.
 
 Tests should not hard-code the literal SHA-256 output.
@@ -475,7 +511,7 @@ persistence and idempotency
 At the current checkpoint, the complete suite passes:
 
 ```text
-152 passed
+234 passed
 ```
 
 Run the suite with:

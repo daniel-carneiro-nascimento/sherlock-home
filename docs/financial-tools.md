@@ -1,12 +1,40 @@
 # Financial Tools
 
-## Purpose
+## Status
 
-Phase 5 introduces deterministic financial-analysis primitives over transactions already persisted in PostgreSQL.
+**Phase 5 — Financial Tools is implemented and validated.**
 
-These tools are application logic, not LLM reasoning.
+Current validated project baseline:
 
-The intended boundary is:
+```text
+234 passed
+```
+
+Implementation:
+
+```text
+app/services/financial_analysis.py
+tests/test_financial_analysis.py
+```
+
+Implemented deterministic primitives:
+
+```text
+get_monthly_spending()
+get_category_spending()
+compare_monthly_spending()
+find_recurring_expenses()
+get_cash_flow()
+detect_spending_anomalies()
+```
+
+No Phase 5 implementation required a database schema or Alembic migration.
+
+---
+
+## Architectural Boundary
+
+Financial tools are deterministic application logic.
 
 ```text
 PostgreSQL canonical transactions
@@ -20,88 +48,50 @@ authenticated API and/or approved tool dispatcher
 LLM interpretation when needed
 ```
 
-The LLM must not independently recompute financial totals from transaction text when a deterministic tool can provide the answer.
+The LLM must not independently recompute financial totals from transaction text when deterministic software can provide the result.
 
-## Core invariants
+Responsibilities remain separate:
 
-Every financial tool should preserve these rules:
+```text
+service
+    queries and calculates
+
+tool adapter / dispatcher
+    exposes an approved deterministic operation
+
+API
+    handles HTTP, authentication, authorization, and serialization
+
+LLM
+    interprets structured results
+```
+
+Phase 5 intentionally stops at the deterministic service boundary. Phase 6 will expose these services through an approved agent/tool-dispatch path.
+
+---
+
+## Shared Invariants
+
+All Phase 5 tools preserve these rules:
 
 1. Monetary arithmetic uses Python `Decimal` and PostgreSQL fixed-precision values.
 2. Query boundaries are explicit and reproducible.
 3. Transaction selection is deterministic.
 4. `transaction_type`, `category`, and merchant semantics come from persisted canonical data.
 5. Tools return structured data rather than prose.
-6. The tool layer does not need LLM access.
+6. The financial-analysis layer does not require LLM access.
 7. Database credentials remain outside LLM context.
 8. Empty-result behavior is explicit.
-9. Tests verify invariants and query semantics rather than one hard-coded fixture history.
-10. Financial tools do not mutate transactions unless a tool is explicitly designed as a protected write operation.
-
-## Service placement
-
-The initial implementation should keep query/calculation services separate from API routes.
-
-Recommended structure:
-
-```text
-app/
-├── services/
-│   ├── financial_pipeline.py
-│   └── financial_analysis.py
-└── tools/
-    └── financial.py
-```
-
-The exact split can evolve, but responsibilities should remain distinct:
-
-```text
-service
-    queries and calculates
-
-tool adapter
-    exposes an approved deterministic operation
-
-API route
-    handles HTTP/authentication/serialization
-
-LLM
-    interprets a structured result
-```
-
-## Phase 5 implementation order
-
-```text
-1. monthly spending
-2. category spending
-3. spending comparison
-4. recurring expenses
-5. cash-flow analysis
-6. anomaly detection
-```
-
-Monthly spending should establish the shared conventions used by the later tools.
+9. Tests use synthetic transactions in the isolated test database.
+10. Financial tools do not mutate persisted financial records.
+11. Transfers are not silently treated as spending or income.
+12. Analytical spending totals are exposed as positive magnitudes while source transaction signs remain preserved in persistence.
 
 ---
 
-## Tool 1 — Monthly Spending
+## 1. Monthly Spending
 
-### Definition
-
-Monthly spending is the sum of persisted transactions whose:
-
-```text
-transaction_type = expense
-```
-
-and whose transaction date belongs to the requested calendar month.
-
-Income and transfer movements are excluded.
-
-The tool should not infer expense status from amount sign at query time. Transaction typing already belongs to the ingestion/enrichment pipeline.
-
-### Proposed deterministic interface
-
-A service-level interface may be conceptually shaped as:
+Implemented interface:
 
 ```python
 get_monthly_spending(
@@ -112,130 +102,132 @@ get_monthly_spending(
 ) -> MonthlySpendingResult
 ```
 
-The exact Python name may change during implementation. The contract is more important than the function name.
+Only `transaction_type="expense"` contributes to monthly spending.
 
-### Proposed result shape
-
-```text
-MonthlySpendingResult
-├── year
-├── month
-├── start_date
-├── end_date
-├── transaction_count
-└── total
-```
-
-`total` should be a `Decimal`.
-
-Because current persisted expense amounts may use debit-negative source semantics, the implementation must define one output convention and test it explicitly.
-
-Recommended analysis convention:
+The query uses a half-open calendar interval:
 
 ```text
-stored expense amount: -23.50
-reported spending total: 23.50
+date >= first day of requested month
+date < first day of next month
 ```
 
-In other words, analytical spending totals are positive magnitudes even if persisted source movements are negative.
+Income and transfers are excluded.
 
-This conversion belongs in deterministic application code.
+Persisted source debit signs remain unchanged. Analytical spending is returned as a positive magnitude.
 
-### Date semantics
-
-Calendar month boundaries should be explicit:
-
-```text
-start_date = first day of requested month
-end_date = first day of next month
-```
-
-The database query should preferably use a half-open interval:
-
-```text
-date >= start_date
-date < end_date
-```
-
-This avoids month-length special cases and composes cleanly with later date-range tools.
-
-### Empty month
-
-An empty month should produce a valid deterministic result:
+An empty month produces:
 
 ```text
 transaction_count = 0
 total = Decimal("0.00")
 ```
 
-It should not produce `None`, fabricated activity, or an LLM-generated estimate.
+---
 
-### Tests
+## 2. Category Spending
 
-The first financial-tool test set should cover at least:
+Implemented interface:
 
-```text
-multiple expenses are summed
-income is excluded
-transfer is excluded
-adjacent months are excluded
-empty month returns zero
-Decimal precision is preserved
-reported spending uses the documented positive-magnitude convention
+```python
+get_category_spending(
+    session,
+    *,
+    year: int,
+    month: int,
+) -> CategorySpendingResult
 ```
 
-Tests should derive expected totals from synthetic test transactions inserted into the isolated test database.
+Only expense transactions participate.
 
-Do not use real household transactions as fixtures.
+`category=None` remains explicit. Sherlock Home does not invent `"other"` or `"unknown"`.
+
+Category rows are sorted deterministically by total descending and then category name.
 
 ---
 
-## Tool 2 — Category Spending
+## 3. Spending Comparison
 
-This tool should build on the monthly/date-range query conventions established by monthly spending.
+Implemented interface:
 
-Conceptual output:
-
-```text
-category -> total
+```python
+compare_monthly_spending(
+    session,
+    *,
+    base_year: int,
+    base_month: int,
+    comparison_year: int,
+    comparison_month: int,
+) -> SpendingComparisonResult
 ```
 
-Only `transaction_type = expense` records are eligible.
+The implementation reuses `get_monthly_spending()` instead of duplicating monthly aggregation.
 
-`category=None` should remain explicit rather than being silently guessed.
-
----
-
-## Tool 3 — Spending Comparison
-
-Comparison should consume deterministic period totals rather than duplicate calculation logic.
-
-For example:
+It returns:
 
 ```text
-period A total
-period B total
+base period
+comparison period
 absolute difference
 percentage difference
 ```
 
-Division-by-zero behavior must be explicit.
+If the comparison period is zero:
+
+```text
+percentage_difference = None
+```
+
+No arbitrary or infinite percentage is fabricated.
 
 ---
 
-## Tool 4 — Recurring Expenses
+## 4. Recurring Expenses
 
-Recurring-expense detection may use deterministic merchant/description/date/amount heuristics.
+Implemented interface:
 
-A first implementation should favor transparent rules over probabilistic or LLM classification.
+```python
+find_recurring_expenses(
+    session,
+    *,
+    start_date: date,
+    end_date: date,
+    min_occurrences: int = 3,
+    min_interval_days: int = 20,
+    max_interval_days: int = 40,
+    amount_tolerance: Decimal = Decimal("0.10"),
+) -> RecurringExpensesResult
+```
 
-The result should identify why a candidate was considered recurring.
+Recurring detection is deterministic and explainable.
+
+Grouping uses normalized merchant when present, otherwise normalized original description.
+
+A candidate must satisfy explicit:
+
+- occurrence count;
+- interval bounds;
+- amount-tolerance rules.
+
+Income and transfers are excluded.
+
+No fuzzy or LLM classification is used.
 
 ---
 
-## Tool 5 — Cash-flow Analysis
+## 5. Cash-Flow Analysis
 
-Cash flow should treat movement types separately:
+Implemented interface:
+
+```python
+get_cash_flow(
+    session,
+    *,
+    start_date: date,
+    end_date: date,
+) -> CashFlowResult
+```
+
+Movement types remain separate:
 
 ```text
 income
@@ -243,52 +235,131 @@ expense
 transfer
 ```
 
-Transfers must not be counted as household income or expense merely because money moved between accounts.
+Transfers are counted as transfers but excluded from household net cash flow.
+
+```text
+net_cash_flow = income_total - expense_total
+```
+
+Expense totals are exposed as positive analytical magnitudes.
 
 ---
 
-## Tool 6 — Anomaly Detection
+## 6. Deterministic Anomaly Detection
 
-Initial anomaly detection should remain deterministic and explainable.
+Implemented interface:
 
-Examples may include:
-
-```text
-expense above configured threshold
-merchant spend materially above historical deterministic baseline
-category total outside an explicit statistical threshold
+```python
+detect_spending_anomalies(
+    session,
+    *,
+    start_date: date,
+    end_date: date,
+    min_history: int = 3,
+    threshold_multiplier: Decimal = Decimal("2.00"),
+) -> SpendingAnomaliesResult
 ```
 
-An LLM may later explain a detected anomaly, but it should not be the primary detector.
-
-## API and agent integration
-
-Phase 5 tools should be usable without the LLM.
-
-The future integration path is:
+For each candidate expense, the detector uses prior history in this order:
 
 ```text
-authenticated request
+merchant history
+    ↓ if merchant unavailable
+category history
+```
+
+A candidate requires at least `min_history` prior matching expenses.
+
+A transaction is reported when its positive spending magnitude meets or exceeds:
+
+```text
+historical average × threshold_multiplier
+```
+
+Transactions without a merchant or category basis are not guessed into a baseline.
+
+No LLM participates in detection.
+
+---
+
+## Date-Range Validation
+
+Range-based tools use:
+
+```text
+start_date <= transaction_date < end_date
+```
+
+and reject:
+
+```text
+end_date <= start_date
+```
+
+Recurrence and anomaly configuration values are validated before execution.
+
+---
+
+## Testing
+
+Phase 5 coverage lives in:
+
+```text
+tests/test_financial_analysis.py
+```
+
+The tests cover:
+
+```text
+monthly aggregation
+income/transfer exclusion
+calendar boundaries
+Decimal precision
+category grouping
+uncategorized expenses
+deterministic ordering
+month comparison
+zero-reference comparison
+recurring merchant patterns
+description fallback
+irregular recurrence rejection
+amount-tolerance rejection
+cash-flow semantics
+negative cash flow
+empty periods
+merchant-history anomaly detection
+category-history anomaly fallback
+minimum anomaly history
+invalid configuration
+invalid date ranges
+```
+
+Complete project baseline after Phase 5:
+
+```text
+234 passed
+```
+
+---
+
+## Phase 6 Integration Boundary
+
+The next execution path is:
+
+```text
+agent request
     ↓
-authorization
+approved tool registry
     ↓
-deterministic financial tool
+tool dispatcher
+    ↓
+deterministic tool authorization
+    ↓
+financial-analysis service
     ↓
 structured result
+    ↓
+LLM interpretation / explanation
 ```
 
-and later:
-
-```text
-agent requests approved tool
-    ↓
-tool authorization
-    ↓
-deterministic financial tool
-    ↓
-structured result
-    ↓
-LLM explanation
-```
-
-This keeps financial arithmetic independently testable and auditable.
+The agent must not receive arbitrary SQL access and must not duplicate financial arithmetic already implemented in this service.

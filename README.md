@@ -53,7 +53,13 @@ The project currently includes:
 - opaque public resource identifiers;
 - persistent protected-configuration audit events;
 - private HTTPS development/deployment model;
-- **195 automated tests passing**.
+- deterministic Phase 5 financial-analysis services;
+- monthly and category spending analysis;
+- month-to-month spending comparison;
+- deterministic recurring-expense detection;
+- deterministic cash-flow analysis;
+- deterministic anomaly detection;
+- **234 automated tests passing**.
 
 The detailed project plan lives outside this README:
 
@@ -238,25 +244,52 @@ pytest -q
 Current validated baseline:
 
 ```text
-195 passed
+234 passed
 ```
 
-Coverage includes security policy, ingestion, persistence, authentication, authorization, CSRF, session lifecycle, rate limiting, opaque IDs, API contract checks, protected configuration audit behavior, and deterministic financial enrichment.
+Coverage includes security policy, ingestion, persistence, authentication, authorization, CSRF, session lifecycle, rate limiting, opaque IDs, API contract checks, protected configuration audit behavior, deterministic financial enrichment, and the complete Phase 5 financial-analysis service layer.
 
 See **[docs/testing.md](docs/testing.md)**.
 
 ## Current Development Frontier
 
-The next major functional phase is **Phase 5 — Financial Tools**.
+**Phase 5 — Financial Tools is complete.**
 
-The first implementation target is **monthly spending**, followed by category spending, recurring-expense detection, cash-flow analysis, month comparison, and anomaly detection.
+The implemented deterministic service layer provides:
 
-CSV and OFX ingestion remain open Phase 3 adapters, but they do not block financial-tool development because the canonical Santander pipeline already persists normalized, typed, categorized transactions.
+```text
+get_monthly_spending()
+get_category_spending()
+compare_monthly_spending()
+find_recurring_expenses()
+get_cash_flow()
+detect_spending_anomalies()
+```
+
+The next major functional phase is **Phase 6 — Agentic Layer**.
+
+The first Phase 6 boundary is:
+
+```text
+agent request
+    ↓
+approved tool registry / dispatcher
+    ↓
+deterministic tool authorization
+    ↓
+existing financial-analysis service
+    ↓
+structured result
+    ↓
+LLM interpretation / explanation
+```
+
+CSV and OFX ingestion remain open Phase 3 adapters, but they do not block Phase 6 because the canonical Santander pipeline already persists normalized, typed, categorized transactions.
 
 See:
 
 - **[Roadmap](docs/ROADMAP.md)**
-- **[Financial tools design](docs/financial-tools.md)**
+- **[Financial tools](docs/financial-tools.md)**
 
 ## Documentation
 
@@ -267,7 +300,7 @@ Detailed documentation lives under `docs/`:
 - **[API v1](docs/API_V1.md)** — authenticated API contract
 - **[Private HTTPS deployment](docs/PRIVATE_HTTPS_DEPLOYMENT.md)** — private deployment model
 - **[Financial data flow](docs/financial-data-flow.md)** — ingestion and deterministic enrichment pipeline
-- **[Financial tools](docs/financial-tools.md)** — deterministic analysis-tool contracts and Phase 5 implementation order
+- **[Financial tools](docs/financial-tools.md)** — implemented deterministic analysis services and Phase 6 integration boundary
 - **[Database](docs/database.md)** — PostgreSQL, SQLAlchemy, Alembic, and idempotency
 - **[Parser architecture](docs/parsers/README.md)** — parser isolation strategy
 - **[Santander parser](docs/parsers/santander.md)** — current bank-specific parser

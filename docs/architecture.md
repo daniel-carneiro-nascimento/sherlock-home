@@ -1025,6 +1025,48 @@ parsers/
 
 ---
 
+## Deterministic Financial Analysis Layer
+
+Phase 5 adds a deterministic analysis layer above persisted canonical transactions.
+
+```text
+PostgreSQL
+    ↓
+app/services/financial_analysis.py
+    ↓
+structured financial-analysis results
+    ↓
+approved API / tool boundary
+    ↓
+Phase 6 agent orchestration
+```
+
+Implemented primitives:
+
+```text
+get_monthly_spending()
+get_category_spending()
+compare_monthly_spending()
+find_recurring_expenses()
+get_cash_flow()
+detect_spending_anomalies()
+```
+
+Architectural properties:
+
+- financial arithmetic uses deterministic application code and `Decimal`
+- spending tools consume persisted transaction semantics
+- transfers are not silently treated as spending or income
+- recurrence and anomaly detection use explicit, explainable rules
+- range validation and empty-result behavior are deterministic
+- results are structured objects rather than generated prose
+- the analysis layer does not require LLM access
+- no Phase 5 database schema or Alembic migration was required
+
+Phase 6 should expose these primitives through approved tool-dispatch and authorization boundaries. The agent must not receive arbitrary SQL access.
+
+---
+
 ## 23. Planned Evolution
 
 The next financial-data stages include:

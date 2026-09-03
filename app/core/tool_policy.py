@@ -18,18 +18,16 @@ class ToolDefinition:
 
 
 APPROVED_TOOLS = {
-    "get_monthly_spending": ToolDefinition(
-        name="get_monthly_spending",
-        permission=ToolPermission.READ,
-    ),
-    "get_category_total": ToolDefinition(
-        name="get_category_total",
-        permission=ToolPermission.READ,
-    ),
-    "compare_months": ToolDefinition(
-        name="compare_months",
-        permission=ToolPermission.ANALYZE,
-    ),
+    "get_monthly_spending": ToolDefinition("get_monthly_spending", ToolPermission.READ),
+    "get_category_spending": ToolDefinition("get_category_spending", ToolPermission.READ),
+    "compare_monthly_spending": ToolDefinition("compare_monthly_spending", ToolPermission.ANALYZE),
+    "find_recurring_expenses": ToolDefinition("find_recurring_expenses", ToolPermission.ANALYZE),
+    "get_cash_flow": ToolDefinition("get_cash_flow", ToolPermission.ANALYZE),
+    "detect_spending_anomalies": ToolDefinition("detect_spending_anomalies", ToolPermission.ANALYZE),
+
+    # Legacy policy names retained temporarily for backwards compatibility.
+    "get_category_total": ToolDefinition("get_category_total", ToolPermission.READ),
+    "compare_months": ToolDefinition("compare_months", ToolPermission.ANALYZE),
 }
 
 
@@ -41,7 +39,6 @@ def validate_tool(tool_name: str) -> SecurityViolation | None:
             reason="unauthorized_tool",
             shutdown_required=False,
         )
-
     return None
 
 
@@ -49,14 +46,11 @@ def validate_tool_permission(
     tool_name: str,
     allowed_permissions: set[ToolPermission],
 ) -> SecurityViolation | None:
-
     violation = validate_tool(tool_name)
-
     if violation is not None:
         return violation
 
     tool = APPROVED_TOOLS[tool_name]
-
     if tool.permission not in allowed_permissions:
         return SecurityViolation(
             rule_id="SH-TOOL-002",

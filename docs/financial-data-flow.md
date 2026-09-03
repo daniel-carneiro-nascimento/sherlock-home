@@ -170,23 +170,36 @@ The local web UI can manage PostgreSQL-backed rules through authenticated API en
 
 ## Analysis boundary
 
-With canonical transactions persisted, Phase 5 begins above the ingestion layer:
+With canonical transactions persisted, Phase 5 now provides the deterministic analysis layer:
 
 ```text
 Local PostgreSQL
     ↓
-Deterministic Financial Tools
+app/services/financial_analysis.py
     ↓
-Authenticated application/API boundary
+monthly spending
+category spending
+spending comparison
+recurring expenses
+cash-flow analysis
+anomaly detection
     ↓
-Future agent orchestration
+structured deterministic results
     ↓
-LLM interpretation/explanation
+authenticated application / approved tool boundary
+    ↓
+Phase 6 agent orchestration
+    ↓
+LLM interpretation / explanation
 ```
 
-Financial tools must query persisted canonical data. They must not re-parse statements or ask the LLM to calculate totals.
+Financial tools query persisted canonical data. They do not re-parse statements and do not ask the LLM to calculate totals.
 
-The first Phase 5 target is monthly spending. Its contract and the common rules for later analytical tools are documented in [`financial-tools.md`](financial-tools.md).
+Phase 5 is complete and validated as part of the `234 passed` project baseline.
+
+Phase 6 must consume these deterministic primitives through an approved tool registry/dispatcher rather than exposing arbitrary SQL or duplicating financial arithmetic in the LLM.
+
+See [`financial-tools.md`](financial-tools.md).
 
 ## Future multi-bank flow
 

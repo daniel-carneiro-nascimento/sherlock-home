@@ -10,6 +10,7 @@ The README intentionally contains only a concise project overview. This file tra
 
 - **DONE** — the planned scope for the phase is implemented and validated.
 - **IN PROGRESS** — core capability exists, but listed work remains.
+- **NEXT** — the next major implementation phase.
 - **PLANNED** — not yet started as a dedicated project phase.
 
 ---
@@ -112,36 +113,41 @@ Additional validated hardening:
 
 ---
 
-## Phase 5 — Financial Tools — NEXT
+## Phase 5 — Financial Tools — DONE
 
-- [ ] Monthly spending
-- [ ] Category spending
-- [ ] Recurring expenses
-- [ ] Cash-flow analysis
-- [ ] Spending comparison
-- [ ] Anomaly detection
+- [x] Monthly spending
+- [x] Category spending
+- [x] Spending comparison
+- [x] Recurring expenses
+- [x] Cash-flow analysis
+- [x] Anomaly detection
 
-**Goal:** expose deterministic financial analysis primitives that can be called directly by the API and later by the agent layer.
-
-### Recommended implementation order
+Implemented deterministic service functions:
 
 ```text
-1. monthly spending
-2. category spending
-3. spending comparison
-4. recurring expenses
-5. cash-flow analysis
-6. anomaly detection
+get_monthly_spending()
+get_category_spending()
+compare_monthly_spending()
+find_recurring_expenses()
+get_cash_flow()
+detect_spending_anomalies()
 ```
 
-The first tool should establish the common service contract, monetary precision rules, date-range semantics, test style, and API-independent result shape that later tools reuse.
+**Validated project baseline after Phase 5:**
 
-Detailed design: [`financial-tools.md`](financial-tools.md).
+```text
+234 passed
+```
+
+**Outcome:** persisted canonical transactions can now be analyzed through deterministic, structured, API-independent financial primitives without giving the LLM direct database arithmetic responsibility.
+
+Detailed implementation: [`financial-tools.md`](financial-tools.md).
 
 ---
 
-## Phase 6 — Agentic Layer — PLANNED
+## Phase 6 — Agentic Layer — NEXT
 
+- [ ] Tool registry
 - [ ] Tool dispatcher
 - [ ] Deterministic tool execution
 - [ ] Structured tool responses
@@ -149,7 +155,19 @@ Detailed design: [`financial-tools.md`](financial-tools.md).
 - [ ] Financial workflows
 - [ ] Tool permission boundaries
 
-**Goal:** allow the LLM to reason over approved financial tools without allowing the model to bypass deterministic execution or authorization boundaries.
+**Goal:** allow the local LLM to reason over approved deterministic tools without allowing the model to bypass authorization, issue arbitrary SQL, or replace deterministic financial calculations.
+
+### Recommended implementation order
+
+```text
+1. define financial tool registry/contracts
+2. implement tool dispatcher
+3. connect existing deterministic tool authorization
+4. serialize structured financial-tool results
+5. add agent orchestration over approved tools
+6. add financial workflows
+7. validate permission and prompt-injection boundaries
+```
 
 ---
 
@@ -183,21 +201,25 @@ Detailed design: [`financial-tools.md`](financial-tools.md).
 The next implementation target is:
 
 ```text
-Phase 5
+Phase 6
     ↓
-Financial Tools
+Agentic Layer
     ↓
-Monthly spending
+Tool registry / dispatcher
+    ↓
+Deterministic tool authorization
+    ↓
+Structured financial-tool execution
 ```
 
-Two ingestion extensions remain in Phase 3:
+Two ingestion extensions remain independently open in Phase 3:
 
 ```text
 CSV ingestion
 OFX ingestion
 ```
 
-They can be implemented independently as parser/input adapters as long as they feed the same canonical deterministic financial pipeline.
+They can be implemented as parser/input adapters as long as they feed the same canonical deterministic financial pipeline.
 
 ## Architectural Invariants
 
@@ -213,3 +235,4 @@ Future phases must preserve these rules:
 8. New bank/statement formats must be isolated behind deterministic ingestion adapters.
 9. Financial-tool arithmetic must use deterministic code and fixed-precision monetary values.
 10. Derived analytical results must be reproducible from persisted canonical transactions and explicit query parameters.
+11. Agentic execution must use an approved tool registry rather than arbitrary code, SQL, shell, or unrestricted Python execution.

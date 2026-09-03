@@ -1,0 +1,28 @@
+Sherlock Home documentation update — Phase 5 complete
+
+Basis:
+- Public GitHub repository main branch was reviewed before this package was generated.
+- The current public README still reported 195 tests and Phase 5 as the next frontier.
+- docs/testing.md still reported an older 152-test checkpoint.
+- docs/financial-data-flow.md still described monthly spending as the first future Phase 5 target.
+- docs/ROADMAP.md still marked Phase 5 as NEXT.
+- docs/financial-tools.md still described several interfaces as proposed/future.
+
+This package updates documentation in-place instead of overwriting the entire repository tree.
+That preserves the current public README banner, roadmap asset references, API/security documentation,
+and the long architecture/testing documents.
+
+Apply from repository root:
+
+    unzip -o sherlock-home-phase5-docs-update.zip -d .
+    python scripts/apply_phase5_docs_update.py
+
+Then review:
+
+    git diff
+    pytest -q
+
+Expected test baseline:
+    234 passed
+
+No application code, database model, Alembic migration, or database data is modified by this package.
