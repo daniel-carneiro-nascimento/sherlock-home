@@ -51,3 +51,14 @@ models/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime logs
+logs/
+*.log
+
+# Temporary development / handoff artifacts
+PACKAGE-NOTES.txt
+PHASE*-NOTES.txt
+PHASE*-DOCS-UPDATE*.txt
+README-*.patch
+README-*-UPDATE.txt
