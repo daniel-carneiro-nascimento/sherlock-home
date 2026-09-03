@@ -741,7 +741,28 @@ Phase 3 financial ingestion and deterministic enrichment is complete for the cur
 - [x] Merchant normalization
 - [x] Expense categorization
 
-## Phase 4 — Financial Tools
+## Phase 4 — Authenticated Local API
+
+- [ ] Define `/api/v1` router boundary
+- [ ] Add single-household user model
+- [ ] Add server-side session model
+- [ ] Add local admin bootstrap workflow
+- [ ] Add Argon2id password hashing
+- [ ] Add login/logout/me endpoints
+- [ ] Add secure HttpOnly + SameSite session cookies
+- [ ] Add CSRF protection
+- [ ] Add login rate limiting/backoff
+- [ ] Add authentication dependency
+- [ ] Add authorization dependency
+- [ ] Add OpenAPI security scheme
+- [ ] Add 401/403 security tests
+- [ ] Add category-rule management endpoints
+- [ ] Add merchant-alias management endpoints
+- [ ] Add protected configuration audit events
+- [ ] Document private HTTPS deployment
+- [ ] Prepare UI-facing API contract
+
+## Phase 5 — Financial Tools
 
 - [ ] Monthly spending
 - [ ] Category spending
@@ -750,7 +771,7 @@ Phase 3 financial ingestion and deterministic enrichment is complete for the cur
 - [ ] Spending comparison
 - [ ] Anomaly detection
 
-## Phase 5 — Agentic Layer
+## Phase 6 — Agentic Layer
 
 - [ ] Tool dispatcher
 - [ ] Deterministic tool execution
@@ -759,7 +780,7 @@ Phase 3 financial ingestion and deterministic enrichment is complete for the cur
 - [ ] Financial workflows
 - [ ] Tool permission boundaries
 
-## Phase 6 — Local Retrieval
+## Phase 7 — Local Retrieval
 
 - [ ] Local embeddings
 - [ ] Local vector storage
@@ -767,7 +788,7 @@ Phase 3 financial ingestion and deterministic enrichment is complete for the cur
 - [ ] Selective context injection
 - [ ] Retrieval security controls
 
-## Phase 7 — User Interface
+## Phase 8 — User Interface
 
 - [ ] Local dashboard
 - [ ] Financial charts
