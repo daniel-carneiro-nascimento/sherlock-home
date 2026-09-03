@@ -1,0 +1,64 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@
+ ## Current AI Runtime
+
+ The reference development implementation uses Ollama:
+
+ ```env
+ OLLAMA_HOST=http://127.0.0.1:11434
+ OLLAMA_MODEL=qwen3:14b
+ ```
+
+ Approved local models are controlled by deterministic allowlisting.
+
+ The runtime is intentionally environment-agnostic. A compatible deployment may use Linux, WSL, containers, bare metal, or another private architecture that respects Sherlock Home's security boundaries.
++
++### Ollama prerequisite
++
++Sherlock Home expects an approved Ollama runtime to already be installed and running.
++
++Ollama is **not installed or started automatically by Sherlock Home**. Before starting the application, install Ollama using the official instructions for your operating system and make sure the configured model is available locally.
++
++For the reference configuration:
++
++```bash
++ollama pull qwen3:14b
++ollama list
++```
++
++Configure Sherlock Home through `.env`:
++
++```env
++OLLAMA_HOST=http://127.0.0.1:11434
++OLLAMA_MODEL=qwen3:14b
++```
++
++Verify that the local Ollama runtime is reachable before starting Sherlock Home:
++
++```bash
++curl http://127.0.0.1:11434/api/tags
++```
++
++If Ollama is running on another approved local or private endpoint, update `OLLAMA_HOST` accordingly.
++
++The expected startup flow is:
++
++```text
++Install Ollama
++    ↓
++Start Ollama
++    ↓
++Pull an approved model
++    ↓
++Configure OLLAMA_HOST and OLLAMA_MODEL
++    ↓
++Verify the Ollama endpoint
++    ↓
++Start Sherlock Home
++```
++
++> Protected household and financial data must only be sent to an approved local/private Ollama endpoint. Do not configure a public or third-party inference endpoint for protected Sherlock Home data.
++
+ ## Authenticated API
