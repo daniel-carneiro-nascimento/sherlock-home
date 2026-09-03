@@ -69,6 +69,8 @@ The README intentionally contains only a concise project overview. This file tra
 
 **Remaining scope:** add format-level ingestion paths for CSV and OFX without weakening the canonical normalization and safety boundaries.
 
+These adapters are not blockers for Phase 5 because the existing canonical data path is sufficient for deterministic financial analysis.
+
 ---
 
 ## Phase 4 — Authenticated Local API — DONE
@@ -106,11 +108,11 @@ Additional validated hardening:
 
 **Validated baseline:** `195 passed`.
 
-**Outcome:** Sherlock Home now has a versioned, authenticated, CSRF-protected, audited API suitable for a future same-origin household UI over private HTTPS.
+**Outcome:** Sherlock Home has a versioned, authenticated, CSRF-protected, audited API suitable for a future same-origin household UI over private HTTPS.
 
 ---
 
-## Phase 5 — Financial Tools — PLANNED
+## Phase 5 — Financial Tools — NEXT
 
 - [ ] Monthly spending
 - [ ] Category spending
@@ -120,6 +122,21 @@ Additional validated hardening:
 - [ ] Anomaly detection
 
 **Goal:** expose deterministic financial analysis primitives that can be called directly by the API and later by the agent layer.
+
+### Recommended implementation order
+
+```text
+1. monthly spending
+2. category spending
+3. spending comparison
+4. recurring expenses
+5. cash-flow analysis
+6. anomaly detection
+```
+
+The first tool should establish the common service contract, monetary precision rules, date-range semantics, test style, and API-independent result shape that later tools reuse.
+
+Detailed design: [`financial-tools.md`](financial-tools.md).
 
 ---
 
@@ -163,7 +180,15 @@ Additional validated hardening:
 
 ## Current Development Frontier
 
-The next major functional phase is **Phase 5 — Financial Tools**.
+The next implementation target is:
+
+```text
+Phase 5
+    ↓
+Financial Tools
+    ↓
+Monthly spending
+```
 
 Two ingestion extensions remain in Phase 3:
 
@@ -186,3 +211,5 @@ Future phases must preserve these rules:
 6. Public-cloud deployments, if used, remain private-network/VPN-only with no direct public application ingress.
 7. PostgreSQL and the local model runtime remain private application dependencies.
 8. New bank/statement formats must be isolated behind deterministic ingestion adapters.
+9. Financial-tool arithmetic must use deterministic code and fixed-precision monetary values.
+10. Derived analytical results must be reproducible from persisted canonical transactions and explicit query parameters.

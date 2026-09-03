@@ -61,7 +61,7 @@ income
 transfer
 ```
 
-Explicit rules are evaluated first. The current fallback uses the amount sign for ordinary income/expense classification.
+Explicit rules are evaluated first. The fallback uses the amount sign for ordinary income/expense classification.
 
 ### Expense categorization
 
@@ -94,7 +94,7 @@ Merchant, transaction type, and category are derived enrichment fields and do no
 
 ### PostgreSQL
 
-The local database is the source for later deterministic financial calculations. The LLM does not need database credentials and should not perform financial arithmetic from raw statement text.
+The local database is the source for deterministic financial calculations. The LLM does not need database credentials and should not perform financial arithmetic from raw statement text.
 
 ## Current semantic model
 
@@ -118,30 +118,9 @@ CanonicalTransaction
 
 The source identity participates in fingerprint generation. Derived enrichment does not.
 
-## Future multi-bank flow
-
-```mermaid
-flowchart LR
-    A[Santander PDF] --> AP[Santander Parser]
-    B[Bank B CSV] --> BP[Bank B Parser]
-    C[Bank C OFX] --> CP[Bank C Parser]
-    D[Bank D PDF] --> DP[Bank D Parser]
-
-    AP --> NORM[Canonical normalization]
-    BP --> NORM
-    CP --> NORM
-    DP --> NORM
-
-    NORM --> ENRICH[Generic deterministic enrichment]
-    ENRICH --> DB[(PostgreSQL)]
-```
-
-The parser boundary is deliberate. If one bank changes its export format, the expected change surface is that bank's parser plus its synthetic fixtures and parser tests. Merchant normalization, transaction typing, categorization, fingerprinting, and persistence remain generic downstream stages.
-
-
 ## Runtime enrichment service
 
-The v0.5.0 runtime path centralizes enrichment in:
+The current runtime path centralizes enrichment in:
 
 ```text
 app/services/financial_pipeline.py
@@ -167,24 +146,11 @@ categorize_statement_expenses()
 CanonicalStatement ready for fingerprint/import
 ```
 
-This prevents individual callers from needing to manually assemble `rules=` arguments.
+This prevents individual callers from needing to manually assemble runtime rule inputs.
 
 ### Merchant aliases
 
 Active merchant aliases are loaded from PostgreSQL in priority order.
-
-An alias may convert source variants such as:
-
-```text
-SYNTHETIC MARKET *1234
-SYNTHETIC MARKET *5678
-```
-
-into one canonical merchant:
-
-```text
-SYNTHETIC MARKET
-```
 
 Unmatched merchants remain unchanged; the application does not invent an alias.
 
@@ -200,20 +166,59 @@ Disabled database rules are ignored.
 
 Local YAML category-rule loading remains supported as a deterministic import/bootstrap mechanism. It is not the intended interactive runtime configuration interface.
 
-The future local web UI will manage PostgreSQL-backed rules through API endpoints.
+The local web UI can manage PostgreSQL-backed rules through authenticated API endpoints.
 
+## Analysis boundary
+
+With canonical transactions persisted, Phase 5 begins above the ingestion layer:
+
+```text
+Local PostgreSQL
+    ↓
+Deterministic Financial Tools
+    ↓
+Authenticated application/API boundary
+    ↓
+Future agent orchestration
+    ↓
+LLM interpretation/explanation
+```
+
+Financial tools must query persisted canonical data. They must not re-parse statements or ask the LLM to calculate totals.
+
+The first Phase 5 target is monthly spending. Its contract and the common rules for later analytical tools are documented in [`financial-tools.md`](financial-tools.md).
+
+## Future multi-bank flow
+
+```mermaid
+flowchart LR
+    A[Santander PDF] --> AP[Santander Parser]
+    B[Bank B CSV] --> BP[Bank B Parser]
+    C[Bank C OFX] --> CP[Bank C Parser]
+    D[Bank D PDF] --> DP[Bank D Parser]
+
+    AP --> NORM[Canonical normalization]
+    BP --> NORM
+    CP --> NORM
+    DP --> NORM
+
+    NORM --> ENRICH[Generic deterministic enrichment]
+    ENRICH --> DB[(PostgreSQL)]
+    DB --> TOOLS[Deterministic Financial Tools]
+```
+
+The parser boundary is deliberate. If one bank changes its export format, the expected change surface is that bank's parser plus its synthetic fixtures and parser tests. Merchant normalization, transaction typing, categorization, fingerprinting, persistence, and financial tools remain generic downstream stages.
 
 ## API boundary
 
-The financial pipeline remains independent of API authentication.
+The financial pipeline and financial tools remain independent of API authentication.
 
 ```text
 authenticated API request
     ↓
-authorized application service
+authorized application service/tool
     ↓
-existing deterministic financial pipeline
+deterministic financial query
 ```
 
-Authentication logic must not move into parsers, merchant normalization, transaction typing, categorization, fingerprinting, or persistence.
-
+Authentication logic must not move into parsers, merchant normalization, transaction typing, categorization, fingerprinting, persistence, or financial arithmetic.

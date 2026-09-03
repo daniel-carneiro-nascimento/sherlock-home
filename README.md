@@ -40,8 +40,12 @@ The project currently includes:
 - PostgreSQL + SQLAlchemy + Alembic;
 - deterministic Santander PDF ingestion;
 - transaction fingerprinting and idempotent imports;
-- transaction normalization, typing, merchant normalization, and expense categorization;
-- runtime category rules and merchant aliases;
+- canonical transaction normalization;
+- deterministic merchant normalization and PostgreSQL-backed merchant aliases;
+- transaction typing;
+- deterministic expense categorization and PostgreSQL-backed category rules;
+- runtime financial enrichment orchestration;
+- isolated PostgreSQL integration testing;
 - authenticated `/api/v1` API;
 - Argon2id password hashing;
 - server-side sessions with secure `__Host-` cookies;
@@ -148,7 +152,21 @@ Santander-specific deterministic parser
     ↓
 ParsedStatement / ParsedTransaction
     ↓
-normalization + validation
+parser sanity checks
+    ↓
+statement normalization
+    ↓
+CanonicalStatement / CanonicalTransaction
+    ↓
+load active merchant aliases from PostgreSQL
+    ↓
+merchant normalization
+    ↓
+transaction typing
+    ↓
+load active category rules from PostgreSQL
+    ↓
+expense categorization
     ↓
 SHA-256 fingerprint
     ↓
@@ -157,7 +175,13 @@ idempotent importer
 local PostgreSQL
 ```
 
-Bank-specific parsers are intentionally isolated so one bank's format can evolve without forcing unrelated parsers or the canonical transaction layer to change.
+No external AI service participates in this ingestion path.
+
+`merchant`, `transaction_type`, and `category` are deterministic derived enrichment fields. They are persisted for later analysis but are intentionally excluded from transaction fingerprint identity.
+
+Bank-specific parsers are isolated so one bank's format can evolve without forcing unrelated parsers or the canonical financial layer to change.
+
+The runtime orchestration boundary is documented in **[docs/financial-data-flow.md](docs/financial-data-flow.md)**.
 
 ## Security by Design
 
@@ -219,9 +243,22 @@ Current validated baseline:
 195 passed
 ```
 
-Coverage includes security policy, ingestion, persistence, authentication, authorization, CSRF, session lifecycle, rate limiting, opaque IDs, API contract checks, and protected configuration audit behavior.
+Coverage includes security policy, ingestion, persistence, authentication, authorization, CSRF, session lifecycle, rate limiting, opaque IDs, API contract checks, protected configuration audit behavior, and deterministic financial enrichment.
 
 See **[docs/testing.md](docs/testing.md)**.
+
+## Current Development Frontier
+
+The next major functional phase is **Phase 5 — Financial Tools**.
+
+The first implementation target is **monthly spending**, followed by category spending, recurring-expense detection, cash-flow analysis, month comparison, and anomaly detection.
+
+CSV and OFX ingestion remain open Phase 3 adapters, but they do not block financial-tool development because the canonical Santander pipeline already persists normalized, typed, categorized transactions.
+
+See:
+
+- **[Roadmap](docs/ROADMAP.md)**
+- **[Financial tools design](docs/financial-tools.md)**
 
 ## Documentation
 
@@ -231,7 +268,8 @@ Detailed documentation lives under `docs/`:
 - **[Architecture](docs/architecture.md)** — security boundaries and system design
 - **[API v1](docs/API_V1.md)** — authenticated API contract
 - **[Private HTTPS deployment](docs/PRIVATE_HTTPS_DEPLOYMENT.md)** — private deployment model
-- **[Financial data flow](docs/financial-data-flow.md)** — ingestion pipeline
+- **[Financial data flow](docs/financial-data-flow.md)** — ingestion and deterministic enrichment pipeline
+- **[Financial tools](docs/financial-tools.md)** — deterministic analysis-tool contracts and Phase 5 implementation order
 - **[Database](docs/database.md)** — PostgreSQL, SQLAlchemy, Alembic, and idempotency
 - **[Parser architecture](docs/parsers/README.md)** — parser isolation strategy
 - **[Santander parser](docs/parsers/santander.md)** — current bank-specific parser
