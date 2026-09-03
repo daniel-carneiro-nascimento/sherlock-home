@@ -17,6 +17,14 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Import models for auth
+from app.models.user import User
+from app.models.user_session import UserSession
+
+# Import for Audit
+from app.models.api_audit_event import ApiAuditEvent
+
+# targets the metadata needed - all imports must happens above this line
 target_metadata = Base.metadata
 
 
