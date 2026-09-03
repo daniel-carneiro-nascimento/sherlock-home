@@ -11,7 +11,9 @@ from app.agents.tool_planning import (
     build_tool_planning_context,
     parse_tool_plan,
 )
-from app.tools.registry import ToolRegistry
+from app.tools.registry import (
+    ToolRegistry,
+)
 
 
 PLANNER_SYSTEM_PROMPT = """
@@ -33,6 +35,12 @@ Rules:
 - If no tool is required, return an empty calls list.
 - answer_instruction may briefly state how the final answer should use the
   resulting evidence.
+- For compare_monthly_spending, base is the month being evaluated and
+  comparison is the reference month.
+- When the user says "compare A and B" without specifying direction, use the
+  later month as base/target and the earlier month as comparison/reference.
+- Example: "compare June and July 2026" means July relative to June:
+  base_year=2026, base_month=7, comparison_year=2026, comparison_month=6.
 """.strip()
 
 
@@ -90,6 +98,27 @@ class OllamaFinancialPlanner:
                 "answer_instruction": (
                     "Use the returned "
                     "evidence only."
+                ),
+            },
+            "comparison_example": {
+                "user_message": (
+                    "Compare June and "
+                    "July 2026."
+                ),
+                "call": {
+                    "name": (
+                        "compare_monthly_spending"
+                    ),
+                    "arguments": {
+                        "base_year": 2026,
+                        "base_month": 7,
+                        "comparison_year": 2026,
+                        "comparison_month": 6,
+                    },
+                },
+                "meaning": (
+                    "Evaluate July relative "
+                    "to June."
                 ),
             },
         }
