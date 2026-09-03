@@ -2,8 +2,6 @@
   <img src="docs/assets/sherlock-home_banner.png" alt="Sherlock Home banner" width="100%">
 </p>
 
-# Sherlock Home
-
 Sherlock Home is a **local-first AI agent for personal finance analysis**.
 
 It is designed to help a household understand spending, credit card usage, recurring expenses, cash flow, and financial behavior while keeping protected financial and personal data inside explicitly approved local infrastructure.
