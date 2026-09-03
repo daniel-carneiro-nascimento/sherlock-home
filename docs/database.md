@@ -194,3 +194,21 @@ service endpoints
 
 Household financial rules and aliases are persisted in PostgreSQL. They are not expected to require direct `.env` editing.
 
+
+## Planned API identity tables
+
+The API phase will add PostgreSQL persistence for a minimal single-household identity model:
+
+```text
+users
+sessions
+```
+
+The design is intentionally not multi-tenant. There is no planned `tenant_id`, organization hierarchy, or public signup table.
+
+Passwords will be persisted only as Argon2id hashes.
+
+Session tokens will be generated cryptographically and stored only in a form appropriate for secure server-side validation. Raw reusable session secrets must not be stored as ordinary application data.
+
+The exact migration will be introduced with the API implementation.
+

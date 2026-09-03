@@ -1,5 +1,7 @@
 # Sherlock Home Documentation
 
+Sherlock Home is documented as a **single-household, local-first system**. It is not a public SaaS or multi-tenant platform.
+
 Current documented milestone: **v0.5.0**.
 
 This directory contains implementation-oriented documentation for Sherlock Home.
@@ -45,3 +47,5 @@ fingerprint / idempotent persistence
 ## Releases
 
 - [`releases/v0.5.0.md`](releases/v0.5.0.md) — deterministic financial ingestion and PostgreSQL-backed local enrichment checkpoint.
+
+- [`api-v1-plan.md`](api-v1-plan.md) — authenticated single-household API development plan.

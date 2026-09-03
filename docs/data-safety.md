@@ -1,3 +1,26 @@
+## Non-Negotiable Household Data Policy
+
+Sherlock Home is built to keep household data under household control.
+
+The following uses are explicitly outside the intended operation of the project:
+
+```text
+training external LLMs
+fine-tuning external models
+creating third-party datasets
+advertising
+behavioral profiling
+selling household data
+third-party analytics unrelated to system operation
+external financial processing
+```
+
+This applies to raw and derived household information, including merchant history, categories, transaction types, summaries, household configuration, prompts containing private financial context, retrieval indexes, embeddings, and protected audit context.
+
+Any future external integration must be explicit, narrowly scoped, user-controlled, and subject to the deterministic data-egress policy.
+
+---
+
 # Financial Data Safety
 
 ## Core rule
@@ -112,4 +135,55 @@ The future API must preserve the same security model already used elsewhere:
 - never expose database credentials to the browser or LLM
 
 The database remains directly accessible only to deterministic application components.
+
+
+## Private Cloud Deployment Constraint
+
+If Sherlock Home is hosted in public cloud infrastructure for reliability or availability, it must not become a public application.
+
+```text
+Internet
+    X
+    │
+    └── no direct Sherlock Home ingress
+
+authorized household device
+    ↓
+VPN
+    ↓
+private VPC / subnet
+    ↓
+TLS endpoint
+    ↓
+Sherlock Home
+```
+
+The household controls the VPN or equivalent private-network path.
+
+---
+
+
+## API Authentication and Session Safety — Planned
+
+The authenticated API must be implemented before household configuration is exposed through the web UI.
+
+Planned controls:
+
+- Argon2id password hashing
+- no plaintext password persistence
+- server-side sessions
+- cryptographically random session tokens
+- hashed token persistence
+- Secure cookies
+- HttpOnly cookies
+- SameSite=Strict
+- CSRF protection on mutating operations
+- login rate limiting / backoff
+- explicit authentication dependency
+- explicit authorization dependency
+- deterministic 401/403 behavior
+- audit logging for protected configuration changes
+- no LLM participation in authentication or authorization
+
+There will be no public account-registration endpoint.
 

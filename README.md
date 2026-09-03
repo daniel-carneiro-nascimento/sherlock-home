@@ -36,6 +36,33 @@ The main privacy principle is:
 
 ---
 
+# Privacy and Deployment Boundary
+
+> **Sherlock Home is a single-household, local-first application. It is not designed as a public SaaS, multi-tenant service, or public registration platform.**
+>
+> **Household financial data, household metadata, prompts, derived financial records, merchant history, categorization history, and any other private user data MUST NOT be used to train, fine-tune, evaluate, profile, advertise to, or otherwise improve external LLMs or third-party models.**
+>
+> Sherlock Home does not require cloud LLM processing. Protected household data must remain under the household's administrative control.
+>
+> If Sherlock Home is ever deployed in public cloud infrastructure for reliability reasons, the application must remain on a private network and be reachable only through a user-controlled VPN or equivalent private network boundary. The application itself must not be directly exposed to the public Internet.
+
+The intended privacy posture is:
+
+```text
+No public signup
+No multi-tenancy
+No third-party analytics by default
+No advertising trackers
+No external financial processing
+No external LLM training or model improvement using household data
+No direct public-cloud ingress to the application
+```
+
+The household administrator controls the deployment, storage, access, and retention of household data.
+
+---
+
+
 # Design Philosophy
 
 Sherlock Home separates responsibilities between deterministic software and the LLM.
@@ -481,6 +508,57 @@ Detailed documentation:
 ---
 
 
+## API v1 — In Development
+
+Sherlock Home is now developing the authenticated local API that will become the control boundary for the future household web interface.
+
+The API is being designed from the start for the final single-household security model rather than as an unauthenticated prototype.
+
+Planned base path:
+
+```text
+/api/v1
+```
+
+Current API roadmap:
+
+- [ ] HTTPS-ready local API boundary
+- [ ] single-household authentication model
+- [ ] no public registration endpoint
+- [ ] local administrator bootstrap
+- [ ] Argon2id password hashing
+- [ ] PostgreSQL-backed users
+- [ ] PostgreSQL-backed server-side sessions
+- [ ] secure HttpOnly session cookie
+- [ ] SameSite=Strict cookie policy
+- [ ] CSRF protection for state-changing requests
+- [ ] login rate limiting / backoff
+- [ ] authentication dependency
+- [ ] authorization dependency
+- [ ] deterministic 401 / 403 tests
+- [ ] authenticated category-rule management API
+- [ ] authenticated merchant-alias management API
+- [ ] audit events for protected configuration changes
+- [ ] OpenAPI security scheme
+- [ ] TLS-ready reverse-proxy deployment model
+- [ ] future local web UI over the authenticated API
+
+There will be no `/register` or public self-service signup flow.
+
+The intended authentication surface is:
+
+```text
+/api/v1/auth/login
+/api/v1/auth/logout
+/api/v1/auth/me
+```
+
+Administrative configuration routes will require authenticated and authorized access.
+
+HTTPS protects transport. Authentication establishes identity. Authorization determines permitted actions. These are separate security layers and are being designed together from the beginning.
+
+---
+
 ## Runtime Financial Configuration
 
 Starting with **v0.5.0**, user-editable financial enrichment rules are persisted locally in PostgreSQL rather than being treated as environment configuration.
@@ -733,3 +811,25 @@ You are free to use, study, modify, and redistribute this software under the ter
 Distributed derivative works must preserve the freedoms granted by the GPL and provide the corresponding source code under GPL-compatible terms.
 
 See `LICENSE.md` for the complete license text.
+
+### Phase 4 — Authenticated Local API
+
+- [ ] Define `/api/v1` router boundary
+- [ ] Add single-household user model
+- [ ] Add server-side session model
+- [ ] Add local admin bootstrap workflow
+- [ ] Add Argon2id password hashing
+- [ ] Add login/logout/me endpoints
+- [ ] Add secure HttpOnly + SameSite session cookies
+- [ ] Add CSRF protection
+- [ ] Add login rate limiting/backoff
+- [ ] Add authentication dependency
+- [ ] Add authorization dependency
+- [ ] Add OpenAPI security scheme
+- [ ] Add 401/403 security tests
+- [ ] Add category-rule management endpoints
+- [ ] Add merchant-alias management endpoints
+- [ ] Add protected configuration audit events
+- [ ] Document private HTTPS deployment
+- [ ] Prepare UI-facing API contract
+

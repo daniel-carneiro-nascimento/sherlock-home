@@ -521,3 +521,26 @@ Before adding a fixed expected value to a test, ask:
 If it is merely fixture data, test the property instead.
 
 This keeps Sherlock Home's tests useful when synthetic fixtures evolve and prevents a passing test suite from depending on accidental sample values.
+
+## Planned API Security Tests
+
+The API will not be considered secure merely because endpoints return expected payloads.
+
+Planned deterministic invariants:
+
+```text
+unauthenticated protected request → 401
+authenticated but unauthorized request → 403
+authenticated authorized request → permitted
+invalid session → rejected
+expired/revoked session → rejected
+invalid CSRF token on mutating request → rejected
+disabled user/session → rejected
+login backoff/rate limit → enforced
+public registration endpoint → absent
+OpenAPI security scheme → present
+```
+
+Authentication and authorization tests must not invoke the LLM.
+
+---

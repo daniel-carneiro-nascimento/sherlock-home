@@ -202,3 +202,18 @@ Local YAML category-rule loading remains supported as a deterministic import/boo
 
 The future local web UI will manage PostgreSQL-backed rules through API endpoints.
 
+
+## API boundary
+
+The financial pipeline remains independent of API authentication.
+
+```text
+authenticated API request
+    ↓
+authorized application service
+    ↓
+existing deterministic financial pipeline
+```
+
+Authentication logic must not move into parsers, merchant normalization, transaction typing, categorization, fingerprinting, or persistence.
+

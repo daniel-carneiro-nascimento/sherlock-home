@@ -1076,3 +1076,116 @@ LLM interpretation
 Do not move parsing, authorization, financial arithmetic, or database integrity responsibilities into the LLM when deterministic code can perform them.
 
 That separation is the central architectural principle of Sherlock Home.
+
+## API v1 Security Architecture — In Development
+
+The next architecture layer is the authenticated local API.
+
+The API is intentionally being designed with its final security boundary from the first implementation rather than adding authentication after CRUD endpoints exist.
+
+```text
+Browser
+    ↓ HTTPS
+TLS reverse proxy
+    ↓
+FastAPI /api/v1
+    ↓
+authentication dependency
+    ↓
+authorization dependency
+    ↓
+Pydantic request validation
+    ↓
+deterministic application services
+    ↓
+PostgreSQL
+```
+
+### Authentication model
+
+The planned authentication model is intentionally small and auditable:
+
+```text
+local users
+server-side sessions
+Argon2id password hashes
+cryptographically random session tokens
+hashed session-token persistence
+Secure + HttpOnly cookies
+SameSite=Strict
+CSRF protection
+login rate limiting / backoff
+audit logging
+```
+
+The system will not provide:
+
+```text
+public registration
+social login
+OAuth identity federation by default
+email-based public password recovery
+tenant invitations
+organization membership
+```
+
+The initial administrative user will be provisioned through a local bootstrap workflow under control of the household administrator.
+
+### Planned API surface
+
+```text
+/api/v1/auth/login
+/api/v1/auth/logout
+/api/v1/auth/me
+
+/api/v1/config/category-rules
+/api/v1/config/merchant-aliases
+```
+
+Protected configuration endpoints will require authenticated and authorized access.
+
+### OpenAPI
+
+FastAPI's OpenAPI description will expose the security scheme from the beginning so generated clients and tests observe the same authentication boundary as the application.
+
+### Security responsibilities
+
+```text
+HTTPS
+    → transport confidentiality and integrity
+
+authentication
+    → establish user identity
+
+authorization
+    → determine permitted operation
+
+deterministic services
+    → validate and execute operation
+
+LLM
+    → never decides access
+```
+
+### API implementation roadmap
+
+- [ ] API v1 router
+- [ ] user persistence
+- [ ] session persistence
+- [ ] local administrator bootstrap
+- [ ] Argon2id hashing
+- [ ] login/logout/me
+- [ ] secure cookies
+- [ ] CSRF
+- [ ] login rate limiting
+- [ ] authentication dependency
+- [ ] authorization dependency
+- [ ] OpenAPI security scheme
+- [ ] category-rule management API
+- [ ] merchant-alias management API
+- [ ] configuration audit events
+- [ ] deterministic API security tests
+- [ ] private TLS deployment documentation
+
+---
+
