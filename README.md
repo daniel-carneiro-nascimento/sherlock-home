@@ -1,6 +1,7 @@
 <p align="center">
   <img src="docs/assets/sherlock-home_banner.png" alt="Sherlock Home banner" width="100%">
 </p>
+
 # Sherlock Home
 
 Sherlock Home is a **local-first AI agent for personal finance analysis**.
