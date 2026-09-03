@@ -70,14 +70,7 @@ SQLAlchemy
 Alembic
 Financial statement parsers
 Canonical statement normalization
-Merchant normalization
-Transaction typing
-Expense categorization
-Deterministic taxonomy/rule engine
-PostgreSQL-backed rule configuration
-Runtime financial enrichment service
 Idempotent transaction importer
-Isolated PostgreSQL test database
 Automated test suite
 ```
 
@@ -248,10 +241,8 @@ flowchart LR
     PARSER --> PARSED[Source-Specific Parsed Model]
     PARSED --> NORMALIZE[Statement Normalization]
     NORMALIZE --> CANON[Canonical Financial Model]
-    CANON --> MERCHANT[Merchant Normalization]
-    MERCHANT --> TYPE[Transaction Typing]
-    TYPE --> CATEGORY[Expense Categorization]
-    CATEGORY --> VALIDATE[Deterministic Validation]
+    CANON --> MERCHANT[Deterministic Merchant Normalization]
+    MERCHANT --> VALIDATE[Deterministic Validation]
     VALIDATE --> FINGERPRINT[Transaction Fingerprint]
     FINGERPRINT --> IMPORTER[Idempotent Importer]
     IMPORTER --> DB[(PostgreSQL)]
@@ -418,10 +409,7 @@ CanonicalStatement
     ├── statement_month
     ├── source
     ├── source_type
-    ├── source_account
-    ├── merchant
-    ├── transaction_type
-    └── category
+    └── source_account
 ```
 
 The current normalization implementation lives in:
@@ -450,83 +438,49 @@ This prevents downstream components from depending on Santander-specific parser 
 
 Normalization must preserve financial meaning. It may canonicalize representation, such as whitespace in descriptions or source metadata, but it must not silently alter transaction amounts or dates.
 
----
+### Merchant enrichment
 
-## 11. Derived Financial Semantics
+Merchant normalization is a separate deterministic enrichment stage applied after statement normalization.
 
-After source-specific parsing and canonical statement normalization, Sherlock Home enriches transactions through deterministic stages.
+The implementation lives in:
 
 ```text
-CanonicalTransaction
+app/ingestion/merchant_normalization.py
+```
+
+Its contract is intentionally conservative:
+
+```text
+CanonicalTransaction.original_description
     ↓
-merchant normalization
+deterministic pattern matching
     ↓
-transaction typing
-    ↓
-expense categorization
+recognized merchant
+    → canonical merchant name
+
+unrecognized pattern
+    → merchant = None
 ```
 
-### Merchant normalization
+The current implementation normalizes merchant whitespace and casing and extracts merchant names only from explicitly recognized description patterns.
 
-Merchant normalization derives a stable merchant name only from recognized deterministic patterns. Unknown patterns remain `None`; the system does not ask the LLM to invent a merchant.
+It does not use the LLM to guess a merchant.
 
-Merchant is derived metadata and is not part of transaction identity.
-
-### Transaction type
-
-`transaction_type` describes the financial nature of the movement:
-
-```text
-expense
-income
-transfer
-```
-
-The deterministic typing engine evaluates explicit rules first. When no explicit rule matches, the amount sign provides the current fallback:
-
-```text
-amount < 0  → expense
-amount > 0  → income
-```
-
-Explicit transfer rules take precedence over the sign.
-
-### Expense category
-
-`category` describes the purpose of an expense, not the nature of the movement.
-
-The current expense taxonomy is:
-
-```text
-food
-groceries
-transport
-utilities
-health
-shopping
-housing
-financing
-leisure
-taxes
-```
-
-Only transactions with `transaction_type == "expense"` are eligible for expense categorization.
+This distinction matters because `merchant` is **derived enrichment data**, not source identity. Merchant rules can improve over time without changing the identity of the underlying financial transaction.
 
 Therefore:
 
 ```text
-income   → category = None
-transfer → category = None
-expense  → category may be a taxonomy value or None
+merchant is persisted
+merchant may be re-derived
+merchant is not included in the transaction fingerprint
 ```
 
-Category rules are defined separately from the generic categorization engine in `app/rules/categories.py`. Transaction-type rules are defined in `app/rules/transaction_types.py`. Both use explicit priorities, so overlapping rules have deterministic outcomes.
-
-Merchant, transaction type, and category are derived fields. Changes to these derived values must not create a new transaction fingerprint.
+The enrichment operation must preserve the original financial transaction fields, including date, amount, source description, document, statement month, and source metadata.
 
 ---
 
-## 13. PostgreSQL Architecture
+## 11. PostgreSQL Architecture
 
 PostgreSQL is the current local financial database.
 
@@ -568,7 +522,7 @@ database credentials
 
 ---
 
-## 13. Transaction Schema
+## 12. Transaction Schema
 
 The current `transactions` table includes fields such as:
 
@@ -577,7 +531,6 @@ id
 date
 merchant
 amount
-transaction_type
 installment_current
 installment_total
 card
@@ -598,11 +551,15 @@ NUMERIC(14,2)
 
 Floating-point values should not be used for monetary calculations.
 
-Merchant, transaction type, and category are now populated by deterministic enrichment stages before persistence. Card and installment enrichment remain future work.
+The `merchant` field is now populated when the deterministic merchant normalization layer recognizes a supported description pattern.
+
+Unknown merchant patterns remain `NULL` / `None`; the system does not invent a merchant.
+
+Fields such as category, card, and installments remain available for later deterministic enrichment stages.
 
 ---
 
-## 14. Database Migrations
+## 13. Database Migrations
 
 Schema evolution is managed through Alembic.
 
@@ -626,7 +583,7 @@ Database credentials should not be hard-coded into `alembic.ini`.
 
 ---
 
-## 15. Transaction Fingerprints
+## 14. Transaction Fingerprints
 
 Sherlock Home uses deterministic SHA-256 transaction fingerprints to support idempotent imports.
 
@@ -638,6 +595,9 @@ amount
 normalized description
 document
 statement month
+source
+source type
+source account
 occurrence index
 ```
 
@@ -656,22 +616,26 @@ may represent two different real transactions.
 
 The fingerprint column is constrained as unique in PostgreSQL.
 
+`merchant` is intentionally excluded from the fingerprint.
+
+It is derived data and may change when merchant extraction rules improve. Reclassifying or improving a merchant must not create a new transaction identity.
+
 ---
 
-## 16. Idempotent Importer
+## 15. Idempotent Importer
 
 The transaction importer is designed so that importing the same statement repeatedly does not duplicate data.
 
-Current expected behavior:
+Expected behavior for a normalized statement containing `N` transactions:
 
 ```text
 First import
-29 inserted
+N inserted
 0 skipped
 
 Second import
 0 inserted
-29 skipped
+N skipped
 ```
 
 The high-level flow is:
@@ -679,7 +643,7 @@ The high-level flow is:
 ```mermaid
 flowchart TD
 
-    TX[Parsed Transaction]
+    TX[Canonical Transaction]
 
     TX --> SIG[Build Canonical Signature]
     SIG --> OCC[Determine Occurrence]
@@ -695,7 +659,7 @@ Fingerprinting and idempotent persistence operate on the canonical transaction r
 
 ---
 
-## 17. Data Safety Boundary
+## 16. Data Safety Boundary
 
 Real financial statements must not be committed to the repository.
 
@@ -717,7 +681,7 @@ Fixtures committed to Git must be synthetic.
 
 ---
 
-## 18. Synthetic Test Fixtures
+## 17. Synthetic Test Fixtures
 
 Tests should reproduce the structure of real source formats without reproducing real financial data.
 
@@ -755,7 +719,7 @@ Real statements must never be committed as fixtures.
 
 ---
 
-## 19. Test Strategy
+## 18. Test Strategy
 
 Automated tests are a core architectural component.
 
@@ -805,6 +769,19 @@ source_type and source_account are preserved correctly
 
 The normalization layer must not silently change financial value semantics.
 
+### Merchant normalization tests
+
+Merchant normalization tests verify deterministic enrichment properties:
+
+- known description patterns produce the expected normalized merchant
+- unknown patterns return `None`
+- whitespace and casing normalization is deterministic
+- financial fields remain unchanged during enrichment
+- a whole `CanonicalStatement` can be enriched transaction by transaction
+- merchant values survive importer persistence
+
+Tests do not rely on real merchant data.
+
 ### Fingerprint tests
 
 Fingerprint tests do not hard-code literal SHA-256 outputs.
@@ -846,20 +823,6 @@ second import:
 
 This keeps idempotency tests valid if a synthetic fixture legitimately changes size.
 
-
-### Database-test isolation
-
-Persistence tests use a dedicated PostgreSQL database:
-
-```text
-application runtime → sherlock_home
-pytest              → sherlock_home_test
-```
-
-`tests/conftest.py` validates the test database before destructive setup. The guard fails closed if `POSTGRES_TEST_DB` equals the application database or does not end in `_test`.
-
-This prevents integration tests from deleting real local application transactions.
-
 ### Security tests
 
 Security tests remain deterministic and rule-oriented.
@@ -877,7 +840,7 @@ They verify:
 The current checkpoint has a fully passing automated suite:
 
 ```text
-152 passed
+full pytest suite passing
 ```
 
 Tests should be added whenever a security rule, parser behavior, normalization rule, fingerprint identity rule, persistence invariant, or financial invariant is introduced.
@@ -890,7 +853,7 @@ docs/testing.md
 
 ---
 
-## 20. Current Financial Ingestion Flow
+## 19. Current Financial Ingestion Flow
 
 The currently implemented end-to-end flow is:
 
@@ -901,10 +864,7 @@ sequenceDiagram
     participant Extract as pdftotext -layout
     participant Parser as Santander Parser
     participant Normalize as Statement Normalizer
-    participant Rules as PostgreSQL Rule Store
     participant Merchant as Merchant Normalizer
-    participant Type as Transaction Typing
-    participant Category as Expense Categorizer
     participant Validate as Deterministic Validation
     participant FP as Fingerprint Builder
     participant Import as Idempotent Importer
@@ -917,14 +877,9 @@ sequenceDiagram
     Parser->>Parser: Parse transactions
     Parser->>Normalize: ParsedStatement
     Normalize->>Normalize: Build canonical transactions
-    Normalize->>Rules: Load enabled merchant aliases
-    Rules-->>Normalize: Ordered alias rules
-    Normalize->>Merchant: CanonicalStatement + alias rules
-    Merchant->>Type: Merchant-enriched transactions
-    Type->>Rules: Load enabled category rules
-    Rules-->>Type: Ordered category rules
-    Type->>Category: Typed transactions + category rules
-    Category->>Validate: Expense-categorized transactions
+    Normalize->>Merchant: CanonicalStatement
+    Merchant->>Merchant: Enrich recognized merchants
+    Merchant->>Validate: Enriched CanonicalStatement
     Validate->>FP: Valid canonical transactions
     FP->>Import: Fingerprinted transactions
     Import->>DB: Insert unseen transactions
@@ -937,7 +892,7 @@ The importer depends on the canonical model rather than directly on Santander pa
 
 ---
 
-## 21. Current Repository Responsibilities
+## 20. Current Repository Responsibilities
 
 Relevant paths currently include:
 
@@ -968,22 +923,13 @@ app/models/transaction.py
 app/ingestion/santander_pdf.py
 app/ingestion/normalization.py
 app/ingestion/merchant_normalization.py
-app/ingestion/transaction_typing.py
-app/ingestion/expense_categorization.py
-app/rules/transaction_types.py
-app/rules/categories.py
 app/ingestion/fingerprint.py
 app/ingestion/importer.py
-app/models/category_rule.py
-app/models/merchant_alias.py
-app/services/category_rules.py
-app/services/merchant_aliases.py
-app/services/financial_pipeline.py
 ```
 
 ---
 
-## 22. Documentation Structure
+## 21. Documentation Structure
 
 Architecture-level documentation should remain separated from source-specific operational documentation.
 
@@ -1025,14 +971,12 @@ parsers/
 
 ---
 
-## 23. Planned Evolution
+## 22. Planned Evolution
 
 The next financial-data stages include:
 
 ```text
-rule-management API
-local web configuration UI
-merchant alias expansion
+expense categorization
 additional bank parsers
 CSV ingestion
 OFX ingestion
@@ -1064,6 +1008,8 @@ source-specific deterministic parser
     ↓
 canonical internal representation
     ↓
+deterministic enrichment
+    ↓
 deterministic validation
     ↓
 local persistence
@@ -1076,116 +1022,3 @@ LLM interpretation
 Do not move parsing, authorization, financial arithmetic, or database integrity responsibilities into the LLM when deterministic code can perform them.
 
 That separation is the central architectural principle of Sherlock Home.
-
-## API v1 Security Architecture — In Development
-
-The next architecture layer is the authenticated local API.
-
-The API is intentionally being designed with its final security boundary from the first implementation rather than adding authentication after CRUD endpoints exist.
-
-```text
-Browser
-    ↓ HTTPS
-TLS reverse proxy
-    ↓
-FastAPI /api/v1
-    ↓
-authentication dependency
-    ↓
-authorization dependency
-    ↓
-Pydantic request validation
-    ↓
-deterministic application services
-    ↓
-PostgreSQL
-```
-
-### Authentication model
-
-The planned authentication model is intentionally small and auditable:
-
-```text
-local users
-server-side sessions
-Argon2id password hashes
-cryptographically random session tokens
-hashed session-token persistence
-Secure + HttpOnly cookies
-SameSite=Strict
-CSRF protection
-login rate limiting / backoff
-audit logging
-```
-
-The system will not provide:
-
-```text
-public registration
-social login
-OAuth identity federation by default
-email-based public password recovery
-tenant invitations
-organization membership
-```
-
-The initial administrative user will be provisioned through a local bootstrap workflow under control of the household administrator.
-
-### Planned API surface
-
-```text
-/api/v1/auth/login
-/api/v1/auth/logout
-/api/v1/auth/me
-
-/api/v1/config/category-rules
-/api/v1/config/merchant-aliases
-```
-
-Protected configuration endpoints will require authenticated and authorized access.
-
-### OpenAPI
-
-FastAPI's OpenAPI description will expose the security scheme from the beginning so generated clients and tests observe the same authentication boundary as the application.
-
-### Security responsibilities
-
-```text
-HTTPS
-    → transport confidentiality and integrity
-
-authentication
-    → establish user identity
-
-authorization
-    → determine permitted operation
-
-deterministic services
-    → validate and execute operation
-
-LLM
-    → never decides access
-```
-
-### API implementation roadmap
-
-- [ ] API v1 router
-- [ ] user persistence
-- [ ] session persistence
-- [ ] local administrator bootstrap
-- [ ] Argon2id hashing
-- [ ] login/logout/me
-- [ ] secure cookies
-- [ ] CSRF
-- [ ] login rate limiting
-- [ ] authentication dependency
-- [ ] authorization dependency
-- [ ] OpenAPI security scheme
-- [ ] category-rule management API
-- [ ] merchant-alias management API
-- [ ] configuration audit events
-- [ ] deterministic API security tests
-- [ ] private TLS deployment documentation
-
----
-

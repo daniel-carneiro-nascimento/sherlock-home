@@ -1,6 +1,6 @@
 # Sherlock Home Testing Strategy
 
-Sherlock Home uses deterministic, behavior-oriented tests for security, ingestion, normalization, identity, and persistence.
+Sherlock Home uses deterministic, behavior-oriented tests for security, ingestion, normalization, merchant enrichment, identity, and persistence.
 
 The test suite is designed to validate **rules and invariants**, not memorize one synthetic financial statement.
 
@@ -163,116 +163,42 @@ The normalization layer may canonicalize representation, but it must not silentl
 
 ## Merchant Normalization Tests
 
-`tests/test_merchant_normalization.py` verifies deterministic merchant enrichment.
+`tests/test_merchant_normalization.py` verifies deterministic merchant enrichment independently from the source parser.
 
-The tests establish that:
-
-- recognized patterns produce normalized merchant names
-- whitespace normalization is deterministic
-- unknown patterns remain `None`
-- financial fields are preserved
-- statement-level enrichment does not mutate unrelated canonical metadata
-
-The merchant normalizer must not guess when no deterministic rule matches.
-
----
-
-## Transaction Typing Tests
-
-`tests/test_transaction_typing.py` and `tests/test_transaction_type_rules.py` verify the movement-type taxonomy:
+The merchant normalizer follows a conservative contract:
 
 ```text
-expense
-income
-transfer
+known pattern
+    → normalized merchant
+
+unknown pattern
+    → None
 ```
 
-Tests cover explicit description rules, amount-sign fallback behavior, deterministic rule priority, custom rule injection, and preservation of canonical transaction data.
+The tests verify:
 
-The typing layer answers **what kind of financial movement occurred**.
+- whitespace normalization
+- casing normalization
+- extraction from supported synthetic description patterns
+- conservative `None` behavior for unsupported descriptions
+- preservation of date, amount, original description, document, statement month, and source metadata
+- enrichment of a complete `CanonicalStatement`
 
----
+The test data is synthetic and parameterized where values may vary.
 
-## Expense Categorization Tests
+The merchant normalizer must not guess.
 
-`tests/test_expense_categorization.py` and `tests/test_category_rules.py` verify the expense-purpose taxonomy and its rule engine.
+A new extraction rule should be added only when it can be expressed and tested deterministically.
 
-The current taxonomy is:
+Merchant is also treated as derived data in identity tests:
 
 ```text
-food
-groceries
-transport
-utilities
-health
-shopping
-housing
-financing
-leisure
-taxes
+source transaction identity
+    ≠
+merchant enrichment
 ```
 
-Tests verify:
-
-- taxonomy values are unique
-- rule priorities are unique and sorted
-- every category has at least one rule
-- known synthetic merchants/descriptions map deterministically
-- unknown merchants remain uncategorized
-- rule priority resolves overlapping matches deterministically
-- non-expense transactions are never assigned an expense category
-- categorization preserves transaction type and financial data
-
-In this case, exact taxonomy strings are valid fixed expectations because the taxonomy itself is the rule being tested. This differs from a fixture-specific monetary value, which is merely one sample input.
-
----
-
-## PostgreSQL Rule Configuration Tests
-
-The v0.5.0 suite validates persistent financial enrichment configuration.
-
-Relevant tests cover:
-
-```text
-category rule persistence
-merchant alias persistence
-enabled/disabled filtering
-priority ordering
-database rule override behavior
-runtime pipeline integration
-```
-
-The tests use only the isolated `sherlock_home_test` database.
-
-The `db_session` fixture cleans all mutable integration-test tables before and after each test:
-
-```text
-transactions
-category_rules
-merchant_aliases
-```
-
-This prevents one test's persisted rules from affecting the next test and preserves the fail-closed boundary protecting the normal application database.
-
----
-
-## Runtime Financial Pipeline Tests
-
-`tests/test_financial_pipeline.py` verifies that the production-oriented orchestration layer actually consumes PostgreSQL configuration.
-
-The tests establish that:
-
-- merchant aliases stored in PostgreSQL affect merchant normalization
-- category rules stored in PostgreSQL affect expense categorization
-- database rules can deterministically override broader defaults through priority
-- disabled rules are ignored
-- Santander parser output can pass through the complete runtime enrichment path
-- income remains uncategorized
-- derived fields preserve the source financial data
-
-The importer integration test uses the same runtime preparation service rather than assembling enrichment stages independently.
-
-This is important because the tested pipeline and the intended application pipeline now share the same orchestration boundary.
+Changing or improving merchant normalization must not require changing the transaction fingerprint.
 
 ---
 
@@ -343,38 +269,9 @@ Second import:
 
 That property remains valid if the synthetic fixture later changes size for legitimate structural reasons.
 
-The importer integration test also verifies that derived `merchant`, `transaction_type`, and `category` values are persisted without becoming part of the fingerprint identity.
+The importer integration test also runs the canonical statement through merchant normalization before persistence and verifies that the resulting merchant values are stored correctly.
 
----
-
-## Database Integration Test Isolation
-
-Persistence tests must never use the normal application database.
-
-The test configuration separates:
-
-```text
-POSTGRES_DB=sherlock_home
-POSTGRES_TEST_DB=sherlock_home_test
-```
-
-`tests/conftest.py` provides a dedicated SQLAlchemy engine and `db_session` fixture for integration tests.
-
-Before any destructive test setup, the fixture validates:
-
-```text
-POSTGRES_TEST_DB is configured
-POSTGRES_TEST_DB != POSTGRES_DB
-POSTGRES_TEST_DB ends with "_test"
-```
-
-If any condition fails, database tests fail closed.
-
-The test database may be cleaned between tests because it contains only synthetic test data. The application database must not be truncated, deleted from, or otherwise reset by pytest.
-
-`tests/test_database_fixture.py` also verifies the database identity with `SELECT current_database()`.
-
-This separation is a safety boundary, not only a test convenience.
+Merchant enrichment does not participate in transaction identity, so improving merchant extraction must not make an existing transaction appear new.
 
 ---
 
@@ -441,27 +338,7 @@ canonical-model invariants
 
 Merchant normalization tests
     ↓
-deterministic derived merchant
-
-Transaction typing tests
-    ↓
-movement-type taxonomy
-
-Expense categorization tests
-    ↓
-expense-purpose taxonomy and priority
-
-Database fixture tests
-    ↓
-test-database isolation and fail-closed safety
-
-PostgreSQL rule tests
-    ↓
-persistent aliases, categories, priorities, enabled state
-
-Runtime financial pipeline tests
-    ↓
-production-oriented deterministic orchestration
+deterministic enrichment invariants
 
 Fingerprint tests
     ↓
@@ -475,7 +352,7 @@ persistence and idempotency
 At the current checkpoint, the complete suite passes:
 
 ```text
-152 passed
+full pytest suite passing
 ```
 
 Run the suite with:
@@ -502,13 +379,15 @@ When a new bank or source format is added:
 4. Parameterize value formats that can vary.
 5. Normalize parser output into the canonical model.
 6. Verify normalization invariants.
-7. Pass canonical transactions through generic merchant normalization, transaction typing, and expense categorization.
+7. Run generic deterministic enrichment such as merchant normalization.
 8. Reuse generic fingerprint and importer behavior.
 9. Verify the complete test suite remains green.
 
 The parser should contain source-specific knowledge.
 
-The downstream canonical model, fingerprinting, importer, and financial tools should not require bank-specific logic unless their general contracts change.
+The downstream canonical model, merchant normalization, fingerprinting, importer, and financial tools should not require bank-specific logic unless their general contracts change.
+
+Derived fields such as merchant should be tested separately from transaction identity. A better enrichment rule must not force fingerprint changes for the same source transaction.
 
 ---
 
@@ -521,26 +400,3 @@ Before adding a fixed expected value to a test, ask:
 If it is merely fixture data, test the property instead.
 
 This keeps Sherlock Home's tests useful when synthetic fixtures evolve and prevents a passing test suite from depending on accidental sample values.
-
-## Planned API Security Tests
-
-The API will not be considered secure merely because endpoints return expected payloads.
-
-Planned deterministic invariants:
-
-```text
-unauthenticated protected request → 401
-authenticated but unauthorized request → 403
-authenticated authorized request → permitted
-invalid session → rejected
-expired/revoked session → rejected
-invalid CSRF token on mutating request → rejected
-disabled user/session → rejected
-login backoff/rate limit → enforced
-public registration endpoint → absent
-OpenAPI security scheme → present
-```
-
-Authentication and authorization tests must not invoke the LLM.
-
----
