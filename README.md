@@ -833,24 +833,3 @@ Distributed derivative works must preserve the freedoms granted by the GPL and p
 
 See `LICENSE.md` for the complete license text.
 
-### Phase 4 — Authenticated Local API
-
-- [ ] Define `/api/v1` router boundary
-- [ ] Add single-household user model
-- [ ] Add server-side session model
-- [ ] Add local admin bootstrap workflow
-- [ ] Add Argon2id password hashing
-- [ ] Add login/logout/me endpoints
-- [ ] Add secure HttpOnly + SameSite session cookies
-- [ ] Add CSRF protection
-- [ ] Add login rate limiting/backoff
-- [ ] Add authentication dependency
-- [ ] Add authorization dependency
-- [ ] Add OpenAPI security scheme
-- [ ] Add 401/403 security tests
-- [ ] Add category-rule management endpoints
-- [ ] Add merchant-alias management endpoints
-- [ ] Add protected configuration audit events
-- [ ] Document private HTTPS deployment
-- [ ] Prepare UI-facing API contract
-
