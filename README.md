@@ -59,7 +59,7 @@ The project currently includes:
 - deterministic recurring-expense detection;
 - deterministic cash-flow analysis;
 - deterministic anomaly detection;
-- **234 automated tests passing**.
+- **327 automated tests passing**.
 
 The detailed project plan lives outside this README:
 
