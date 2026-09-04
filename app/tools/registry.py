@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping
 
-from app.core.tool_policy import ToolPermission
+from app.core.tool_policy import (
+    ToolPermission,
+)
+from app.tools.duplicate_charge_tool import (
+    run_duplicate_charges,
+)
 from app.tools.financial_tools import (
     ToolHandler,
     run_cash_flow,
@@ -31,7 +36,11 @@ class RegisteredTool:
 class ToolRegistry:
     def __init__(
         self,
-        tools: Mapping[str, RegisteredTool] | None = None,
+        tools: Mapping[
+            str,
+            RegisteredTool,
+        ]
+        | None = None,
     ) -> None:
         self._tools = dict(
             DEFAULT_TOOLS
@@ -133,15 +142,18 @@ DEFAULT_TOOLS = {
     "find_recurring_expenses": RegisteredTool(
         "find_recurring_expenses",
         (
-            "Find deterministic recurring "
-            "expense candidates in a date range."
+            "Find deterministic recurring expense candidates in a "
+            "date range. Sherlock Home owns the recurrence threshold: "
+            "ranges touching one or two calendar months require at "
+            "least two matching occurrences; ranges touching three "
+            "or more calendar months require at least three. "
+            "The model must not choose min_occurrences."
         ),
         ToolPermission.ANALYZE,
         run_recurring_expenses,
         (
             "start_date",
             "end_date",
-            "min_occurrences",
             "min_interval_days",
             "max_interval_days",
             "amount_tolerance",
@@ -164,9 +176,10 @@ DEFAULT_TOOLS = {
     "detect_spending_anomalies": RegisteredTool(
         "detect_spending_anomalies",
         (
-            "Find deterministic spending "
-            "anomalies using prior "
-            "merchant/category history."
+            "Find deterministic spending anomalies using prior "
+            "merchant/category history. Results include the baseline "
+            "amount, threshold amount, and baseline sample count used "
+            "to explain why a transaction was flagged."
         ),
         ToolPermission.ANALYZE,
         run_spending_anomalies,
@@ -175,6 +188,25 @@ DEFAULT_TOOLS = {
             "end_date",
             "min_history",
             "threshold_multiplier",
+        ),
+    ),
+    "detect_duplicate_charges": RegisteredTool(
+        "detect_duplicate_charges",
+        (
+            "Find exact duplicate-looking expense charges in a date "
+            "range. A candidate requires at least two distinct stored "
+            "transactions with the same date, normalized merchant, "
+            "signed amount, and normalized original description. "
+            "Fingerprint is deliberately ignored because it is an "
+            "ingestion/idempotency identity, not a financial duplicate "
+            "criterion. Results indicate a possible duplicate charge, "
+            "not proof of an erroneous or unauthorized charge."
+        ),
+        ToolPermission.ANALYZE,
+        run_duplicate_charges,
+        (
+            "start_date",
+            "end_date",
         ),
     ),
 }

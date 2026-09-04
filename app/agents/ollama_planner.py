@@ -41,6 +41,14 @@ Rules:
   later month as base/target and the earlier month as comparison/reference.
 - Example: "compare June and July 2026" means July relative to June:
   base_year=2026, base_month=7, comparison_year=2026, comparison_month=6.
+- "Suspicious", "strange", "unusual", or equivalent broad spending questions
+  can refer to more than one deterministic signal. When the user broadly asks
+  whether a period contains suspicious/strange/unusual spending, request BOTH
+  detect_spending_anomalies and detect_duplicate_charges for that same period.
+- If the user asks specifically only about duplicate charges, request
+  detect_duplicate_charges without requiring anomaly detection.
+- If the user asks specifically only about statistical spending anomalies,
+  request detect_spending_anomalies without requiring duplicate detection.
 """.strip()
 
 
@@ -119,6 +127,45 @@ class OllamaFinancialPlanner:
                 "meaning": (
                     "Evaluate July relative "
                     "to June."
+                ),
+            },
+            "suspicious_spending_example": {
+                "user_message": (
+                    "Existem gastos suspeitos "
+                    "em julho de 2026?"
+                ),
+                "calls": [
+                    {
+                        "name": (
+                            "detect_spending_anomalies"
+                        ),
+                        "arguments": {
+                            "start_date": (
+                                "2026-07-01"
+                            ),
+                            "end_date": (
+                                "2026-08-01"
+                            ),
+                        },
+                    },
+                    {
+                        "name": (
+                            "detect_duplicate_charges"
+                        ),
+                        "arguments": {
+                            "start_date": (
+                                "2026-07-01"
+                            ),
+                            "end_date": (
+                                "2026-08-01"
+                            ),
+                        },
+                    },
+                ],
+                "meaning": (
+                    "Broad suspicious-spending "
+                    "analysis combines anomaly "
+                    "and duplicate-charge evidence."
                 ),
             },
         }

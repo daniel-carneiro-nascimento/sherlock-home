@@ -40,6 +40,8 @@ def test_all_expected_capabilities_are_defined():
         "category_spending",
         "recurring_expenses",
         "spending_anomalies",
+        "duplicate_charges",
+        "suspicious_spending",
     }
 
 

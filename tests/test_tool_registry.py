@@ -13,6 +13,7 @@ def test_registry_exposes_only_phase6_financial_tools():
         "find_recurring_expenses",
         "get_cash_flow",
         "detect_spending_anomalies",
+        "detect_duplicate_charges",
     }
 
 
