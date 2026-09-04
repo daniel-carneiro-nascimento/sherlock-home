@@ -1,153 +1,168 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1320" viewBox="0 0 1200 1320" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
   <title id="title">Sherlock Home Roadmap</title>
-  <desc id="desc">Eight project phases shown as a vertical roadmap. Local Runtime, Security, and Authenticated API are done. Financial Data is in progress. Financial Tools, Agentic Layer, Local Retrieval, and User Interface are planned.</desc>
+  <desc id="desc">Separate backend and frontend roadmap lanes for Sherlock Home. Backend phases 1, 2, 4, 5, and 6 are done; phase 3 remains in progress for CSV and OFX ingestion; phase 7 local retrieval is planned. Frontend phase F0 product direction is done; F1 web shell and authenticated navigation is next; later frontend phases are planned toward the Holmes-Hat release.</desc>
+
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0A0F1C"/>
-      <stop offset="100%" stop-color="#111827"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
-    </filter>
+    <style>
+      .bg { fill: #f6f7f4; }
+      .title { font: 700 44px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #16302b; }
+      .subtitle { font: 400 20px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #50605b; }
+      .lane { font: 700 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #16302b; }
+      .phase { font: 700 20px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #17312c; }
+      .small { font: 400 15px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #45554f; }
+      .status { font: 700 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .8px; }
+      .footer { font: 400 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #5c6a66; }
+      .done { fill: #dff3e9; stroke: #78b89d; stroke-width: 2; }
+      .progress { fill: #fff1d9; stroke: #d8a84a; stroke-width: 2; }
+      .planned { fill: #eaf0f8; stroke: #8ea9c5; stroke-width: 2; }
+      .next { fill: #e3f2f0; stroke: #3e9c91; stroke-width: 3; }
+      .release { fill: #16302b; stroke: #16302b; stroke-width: 2; }
+      .lane-line { stroke: #c7d2ce; stroke-width: 4; }
+      .connector { stroke: #8aa39b; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .divider { stroke: #d5ddda; stroke-width: 2; stroke-dasharray: 7 8; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8aa39b"/>
+    </marker>
   </defs>
-  <rect width="1200" height="1320" rx="34" fill="url(#bg)"/>
-  <circle cx="1050" cy="90" r="180" fill="#1E293B" opacity="0.35"/>
-  <circle cx="1040" cy="110" r="110" fill="#0EA5E9" opacity="0.08"/>
 
-  <text x="110" y="88" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="46" font-weight="700">SHERLOCK HOME</text>
-  <text x="110" y="136" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24">Project roadmap • local-first personal finance agent</text>
+  <rect class="bg" x="0" y="0" width="1600" height="1120" rx="28"/>
 
-  <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">
-    <rect x="110" y="172" width="112" height="34" rx="17" fill="#123B2B"/>
-    <text x="166" y="195" fill="#45D483" text-anchor="middle">DONE</text>
-    <rect x="236" y="172" width="154" height="34" rx="17" fill="#44351B"/>
-    <text x="313" y="195" fill="#F4B942" text-anchor="middle">IN PROGRESS</text>
-    <rect x="404" y="172" width="130" height="34" rx="17" fill="#263244"/>
-    <text x="469" y="195" fill="#B8C4D6" text-anchor="middle">PLANNED</text>
+  <text class="title" x="80" y="82">Sherlock Home Roadmap</text>
+  <text class="subtitle" x="80" y="118">Backend and frontend evolve on separate tracks. Holmes-Hat ships when the backend foundation and minimum household web UI meet.</text>
+
+  <!-- Legend -->
+  <g transform="translate(1080 62)">
+    <rect class="done" x="0" y="0" width="110" height="34" rx="17"/>
+    <text class="status" x="55" y="22" text-anchor="middle" fill="#2e6e57">DONE</text>
+    <rect class="progress" x="124" y="0" width="135" height="34" rx="17"/>
+    <text class="status" x="191.5" y="22" text-anchor="middle" fill="#8b671e">IN PROGRESS</text>
+    <rect class="planned" x="273" y="0" width="118" height="34" rx="17"/>
+    <text class="status" x="332" y="22" text-anchor="middle" fill="#4f6d8a">PLANNED</text>
   </g>
 
-  <line x1="154" y1="254" x2="154" y2="1172" stroke="#334155" stroke-width="4" stroke-linecap="round"/>
+  <!-- BACKEND LANE -->
+  <text class="lane" x="80" y="190">Backend Architecture</text>
+  <text class="small" x="80" y="218">Security, persistence, financial data, deterministic tools, agentic execution and local retrieval.</text>
+  <line class="lane-line" x1="100" y1="276" x2="1500" y2="276"/>
 
-  <g filter="url(#shadow)">
-    <rect x="110" y="230" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="230" width="8" height="118" rx="4" fill="#35C2FF"/>
+  <!-- Backend cards -->
+  <g transform="translate(70 245)">
+    <rect class="done" x="0" y="0" width="190" height="132" rx="18"/>
+    <text class="phase" x="18" y="34">Phase 1</text>
+    <text class="small" x="18" y="62">Local Runtime</text>
+    <text class="small" x="18" y="84">Ollama + FastAPI</text>
+    <text class="status" x="18" y="112" fill="#2e6e57">DONE</text>
+
+    <rect class="done" x="210" y="0" width="190" height="132" rx="18"/>
+    <text class="phase" x="228" y="34">Phase 2</text>
+    <text class="small" x="228" y="62">Security</text>
+    <text class="small" x="228" y="84">Fail-closed policy</text>
+    <text class="status" x="228" y="112" fill="#2e6e57">DONE</text>
+
+    <rect class="progress" x="420" y="0" width="220" height="132" rx="18"/>
+    <text class="phase" x="438" y="34">Phase 3</text>
+    <text class="small" x="438" y="62">Financial Data</text>
+    <text class="small" x="438" y="84">CSV + OFX remain</text>
+    <text class="status" x="438" y="112" fill="#8b671e">IN PROGRESS</text>
+
+    <rect class="done" x="660" y="0" width="210" height="132" rx="18"/>
+    <text class="phase" x="678" y="34">Phase 4</text>
+    <text class="small" x="678" y="62">Authenticated API</text>
+    <text class="small" x="678" y="84">Sessions + CSRF</text>
+    <text class="status" x="678" y="112" fill="#2e6e57">DONE</text>
+
+    <rect class="done" x="890" y="0" width="190" height="132" rx="18"/>
+    <text class="phase" x="908" y="34">Phase 5</text>
+    <text class="small" x="908" y="62">Financial Tools</text>
+    <text class="small" x="908" y="84">Deterministic analysis</text>
+    <text class="status" x="908" y="112" fill="#2e6e57">DONE</text>
+
+    <rect class="done" x="1100" y="0" width="200" height="132" rx="18"/>
+    <text class="phase" x="1118" y="34">Phase 6</text>
+    <text class="small" x="1118" y="62">Agentic Layer</text>
+    <text class="small" x="1118" y="84">Planner + tools</text>
+    <text class="status" x="1118" y="112" fill="#2e6e57">DONE</text>
+
+    <rect class="planned" x="1320" y="0" width="190" height="132" rx="18"/>
+    <text class="phase" x="1338" y="34">Phase 7</text>
+    <text class="small" x="1338" y="62">Local Retrieval</text>
+    <text class="small" x="1338" y="84">Embeddings + RAG</text>
+    <text class="status" x="1338" y="112" fill="#4f6d8a">PLANNED</text>
   </g>
-  <circle cx="154" cy="289.0" r="18" fill="#0F172A" stroke="#35C2FF" stroke-width="5"/>
-  <circle cx="154" cy="289.0" r="6" fill="#35C2FF"/>
 
-  <text x="205" y="268" fill="#35C2FF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 01</text>
-  <text x="205" y="302" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">LOCAL RUNTIME</text>
-  <text x="205" y="329" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Local LLM • FastAPI • deterministic control</text>
+  <text class="small" x="80" y="412">Current backend frontier: Phase 3 format adapters can continue independently; core financial analysis and agentic execution are already validated.</text>
 
-  <rect x="934" y="254" width="128" height="34" rx="17" fill="#123B2B"/>
-  <text x="998.0" y="277" fill="#45D483" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">DONE</text>
-  <text x="1062" y="321" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">7 / 7 TASKS</text>
+  <line class="divider" x1="80" y1="462" x2="1520" y2="462"/>
 
-  <g filter="url(#shadow)">
-    <rect x="110" y="370" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="370" width="8" height="118" rx="4" fill="#6C8CFF"/>
+  <!-- FRONTEND LANE -->
+  <text class="lane" x="80" y="520">Frontend Architecture</text>
+  <text class="small" x="80" y="548">Household-facing web UI, navigation, charts, goals, shared finances, accessibility and Sherlock chat.</text>
+
+  <!-- Frontend flow -->
+  <g transform="translate(70 590)">
+    <rect class="done" x="0" y="0" width="210" height="150" rx="18"/>
+    <text class="phase" x="18" y="34">F0</text>
+    <text class="small" x="18" y="62">Product Direction</text>
+    <text class="small" x="18" y="84">Mockups + architecture</text>
+    <text class="small" x="18" y="104">Light/dark + accessibility</text>
+    <text class="status" x="18" y="132" fill="#2e6e57">DONE</text>
+
+    <path class="connector" d="M210 75 H250"/>
+
+    <rect class="next" x="260" y="0" width="230" height="150" rx="18"/>
+    <text class="phase" x="278" y="34">F1</text>
+    <text class="small" x="278" y="62">Web Shell + Auth</text>
+    <text class="small" x="278" y="84">Login + navigation</text>
+    <text class="small" x="278" y="104">Preferences + themes</text>
+    <text class="status" x="278" y="132" fill="#267a70">NEXT</text>
+
+    <path class="connector" d="M490 75 H530"/>
+
+    <rect class="planned" x="540" y="0" width="210" height="150" rx="18"/>
+    <text class="phase" x="558" y="34">F2</text>
+    <text class="small" x="558" y="62">Dashboard + Views</text>
+    <text class="small" x="558" y="84">Charts + transactions</text>
+    <text class="small" x="558" y="104">Alerts + duplicates</text>
+    <text class="status" x="558" y="132" fill="#4f6d8a">PLANNED</text>
+
+    <path class="connector" d="M750 75 H790"/>
+
+    <rect class="planned" x="800" y="0" width="220" height="150" rx="18"/>
+    <text class="phase" x="818" y="34">F3</text>
+    <text class="small" x="818" y="62">Goals + Household</text>
+    <text class="small" x="818" y="84">Metas financeiras</text>
+    <text class="small" x="818" y="104">Metas conjuntas</text>
+    <text class="status" x="818" y="132" fill="#4f6d8a">PLANNED</text>
+
+    <path class="connector" d="M1020 75 H1060"/>
+
+    <rect class="planned" x="1070" y="0" width="190" height="150" rx="18"/>
+    <text class="phase" x="1088" y="34">F4</text>
+    <text class="small" x="1088" y="62">Sherlock Chat</text>
+    <text class="small" x="1088" y="84">Evidence panel</text>
+    <text class="small" x="1088" y="104">Local runtime status</text>
+    <text class="status" x="1088" y="132" fill="#4f6d8a">PLANNED</text>
+
+    <path class="connector" d="M1260 75 H1300"/>
+
+    <rect class="planned" x="1310" y="0" width="200" height="150" rx="18"/>
+    <text class="phase" x="1328" y="34">F5</text>
+    <text class="small" x="1328" y="62">Accessibility</text>
+    <text class="small" x="1328" y="84">Color-safe palettes</text>
+    <text class="small" x="1328" y="104">Keyboard + summaries</text>
+    <text class="status" x="1328" y="132" fill="#4f6d8a">PLANNED</text>
   </g>
-  <circle cx="154" cy="429.0" r="18" fill="#0F172A" stroke="#6C8CFF" stroke-width="5"/>
-  <circle cx="154" cy="429.0" r="6" fill="#6C8CFF"/>
 
-  <text x="205" y="408" fill="#6C8CFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 02</text>
-  <text x="205" y="442" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">SECURITY</text>
-  <text x="205" y="469" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Fail-closed policy • egress • secrets • tools</text>
-
-  <rect x="934" y="394" width="128" height="34" rx="17" fill="#123B2B"/>
-  <text x="998.0" y="417" fill="#45D483" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">DONE</text>
-  <text x="1062" y="461" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">13 / 13 TASKS</text>
-
-  <g filter="url(#shadow)">
-    <rect x="110" y="510" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="510" width="8" height="118" rx="4" fill="#F4B942"/>
+  <!-- Holmes Hat target -->
+  <g transform="translate(260 805)">
+    <rect class="release" x="0" y="0" width="1080" height="152" rx="24"/>
+    <text x="36" y="48" style='font:700 28px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; fill:#ffffff;'>v1.0.0 — Holmes-Hat</text>
+    <text x="36" y="82" style='font:400 17px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; fill:#d9ebe5;'>Minimum household web experience: authenticated login, dashboard, transactions, categories, alerts, duplicate-charge review, Sherlock chat, theme controls and basic accessible chart palettes.</text>
+    <text x="36" y="116" style='font:700 15px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; fill:#9fd8c8;'>Frontend milestone F6 — release gate</text>
   </g>
-  <circle cx="154" cy="569.0" r="18" fill="#0F172A" stroke="#F4B942" stroke-width="5"/>
-  <circle cx="154" cy="569.0" r="6" fill="#F4B942"/>
 
-  <text x="205" y="548" fill="#F4B942" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 03</text>
-  <text x="205" y="582" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">FINANCIAL DATA</text>
-  <text x="205" y="609" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">PostgreSQL • Santander • normalize • categorize</text>
-
-  <rect x="892" y="534" width="170" height="34" rx="17" fill="#44351B"/>
-  <text x="977.0" y="557" fill="#F4B942" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">IN PROGRESS</text>
-  <text x="1062" y="601" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">12 / 14 TASKS</text>
-
-  <g filter="url(#shadow)">
-    <rect x="110" y="650" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="650" width="8" height="118" rx="4" fill="#45D483"/>
-  </g>
-  <circle cx="154" cy="709.0" r="18" fill="#0F172A" stroke="#45D483" stroke-width="5"/>
-  <circle cx="154" cy="709.0" r="6" fill="#45D483"/>
-
-  <text x="205" y="688" fill="#45D483" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 04</text>
-  <text x="205" y="722" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">AUTHENTICATED API</text>
-  <text x="205" y="749" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">/api/v1 • sessions • CSRF • audit • HTTPS</text>
-
-  <rect x="934" y="674" width="128" height="34" rx="17" fill="#123B2B"/>
-  <text x="998.0" y="697" fill="#45D483" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">DONE</text>
-  <text x="1062" y="741" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">20 / 20 TASKS</text>
-
-  <g filter="url(#shadow)">
-    <rect x="110" y="790" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="790" width="8" height="118" rx="4" fill="#B287FF"/>
-  </g>
-  <circle cx="154" cy="849.0" r="18" fill="#0F172A" stroke="#B287FF" stroke-width="5"/>
-  <circle cx="154" cy="849.0" r="6" fill="#B287FF"/>
-
-  <text x="205" y="828" fill="#B287FF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 05</text>
-  <text x="205" y="862" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">FINANCIAL TOOLS</text>
-  <text x="205" y="889" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Spending • recurring • cash flow • anomalies</text>
-
-  <rect x="924" y="814" width="138" height="34" rx="17" fill="#263244"/>
-  <text x="993.0" y="837" fill="#B8C4D6" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">PLANNED</text>
-  <text x="1062" y="881" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">0 / 6 TASKS</text>
-
-  <g filter="url(#shadow)">
-    <rect x="110" y="930" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="930" width="8" height="118" rx="4" fill="#E879F9"/>
-  </g>
-  <circle cx="154" cy="989.0" r="18" fill="#0F172A" stroke="#E879F9" stroke-width="5"/>
-  <circle cx="154" cy="989.0" r="6" fill="#E879F9"/>
-
-  <text x="205" y="968" fill="#E879F9" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 06</text>
-  <text x="205" y="1002" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">AGENTIC LAYER</text>
-  <text x="205" y="1029" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Dispatcher • tools • workflows • permissions</text>
-
-  <rect x="924" y="954" width="138" height="34" rx="17" fill="#263244"/>
-  <text x="993.0" y="977" fill="#B8C4D6" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">PLANNED</text>
-  <text x="1062" y="1021" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">0 / 6 TASKS</text>
-
-  <g filter="url(#shadow)">
-    <rect x="110" y="1070" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="1070" width="8" height="118" rx="4" fill="#33D6C4"/>
-  </g>
-  <circle cx="154" cy="1129.0" r="18" fill="#0F172A" stroke="#33D6C4" stroke-width="5"/>
-  <circle cx="154" cy="1129.0" r="6" fill="#33D6C4"/>
-
-  <text x="205" y="1108" fill="#33D6C4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 07</text>
-  <text x="205" y="1142" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">LOCAL RETRIEVAL</text>
-  <text x="205" y="1169" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Embeddings • vector store • protected retrieval</text>
-
-  <rect x="924" y="1094" width="138" height="34" rx="17" fill="#263244"/>
-  <text x="993.0" y="1117" fill="#B8C4D6" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">PLANNED</text>
-  <text x="1062" y="1161" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">0 / 5 TASKS</text>
-
-  <g filter="url(#shadow)">
-    <rect x="110" y="1210" width="980" height="118" rx="22" fill="#121A28" stroke="#243247" stroke-width="1.5"/>
-    <rect x="110" y="1210" width="8" height="118" rx="4" fill="#94A3B8"/>
-  </g>
-  <circle cx="154" cy="1269.0" r="18" fill="#0F172A" stroke="#94A3B8" stroke-width="5"/>
-  <circle cx="154" cy="1269.0" r="6" fill="#94A3B8"/>
-
-  <text x="205" y="1248" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="800" letter-spacing="2">PHASE 08</text>
-  <text x="205" y="1282" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27" font-weight="700">USER INTERFACE</text>
-  <text x="205" y="1309" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Dashboard • charts • reports • insights</text>
-
-  <rect x="924" y="1234" width="138" height="34" rx="17" fill="#263244"/>
-  <text x="993.0" y="1257" fill="#B8C4D6" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800">PLANNED</text>
-  <text x="1062" y="1301" fill="#CBD5E1" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">0 / 6 TASKS</text>
-
-  <text x="110" y="1265" fill="#64748B" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Detailed checklist: docs/ROADMAP.md</text>
-  <text x="1090" y="1265" fill="#64748B" text-anchor="end" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">GPL-3.0-or-later</text>
+  <text class="footer" x="80" y="1020">Backend roadmap: docs/ROADMAP.md</text>
+  <text class="footer" x="80" y="1048">Frontend roadmap: docs/frontend/ROADMAP.md</text>
+  <text class="footer" x="80" y="1076">Status reflects completed backend financial tools and agentic capabilities, plus the newly separated frontend planning track.</text>
 </svg>
