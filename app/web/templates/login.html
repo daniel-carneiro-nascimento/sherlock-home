@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="{{ preferences.theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar — Sherlock Home</title>
+  <link rel="stylesheet" href="/web/static/sherlock.css">
+</head>
+<body class="login-body">
+  <main class="login-card">
+    <div class="login-brand">
+      <img
+        class="login-mascot"
+        src="/web/static/sherlock-mascot.png"
+        alt=""
+      >
+      <div>
+        <h1>Sherlock Home</h1>
+        <p>Finanças da casa, sem sair de casa.</p>
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="form-error">{{ error }}</div>
+    {% endif %}
+
+    <form action="/web/login" method="post" class="login-form">
+      <label>
+        Usuário
+        <input
+          type="text"
+          name="username"
+          autocomplete="username"
+          required
+          autofocus
+        >
+      </label>
+
+      <label>
+        Senha
+        <input
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+        >
+      </label>
+
+      <button type="submit" class="primary-button">Entrar</button>
+    </form>
+
+    <p class="login-note">
+      Esta primeira interface reutiliza a autenticação segura já existente.
+      E-mail e nome completo entram na próxima migração de identidade.
+    </p>
+  </main>
+</body>
+</html>

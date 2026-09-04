@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="{{ preferences.theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sherlock Home{% endblock %}</title>
+  <link rel="stylesheet" href="/web/static/sherlock.css">
+</head>
+<body class="layout-{{ preferences.layout }}">
+  <input
+    class="sidebar-toggle-input"
+    type="checkbox"
+    id="sidebar-toggle"
+    aria-label="Alternar menu lateral"
+  >
+
+  <aside class="sidebar">
+    <div class="sidebar-brand-row">
+      <a class="brand" href="/web/dashboard">
+        <img
+          class="mascot-image"
+          src="/web/static/sherlock-mascot.png"
+          alt=""
+        >
+        <span class="brand-text">
+          <strong>Sherlock</strong>
+          <small>Home</small>
+        </span>
+      </a>
+    </div>
+
+    <nav class="nav" aria-label="Navegação principal">
+      <a href="/web/dashboard">
+        <span class="nav-icon" aria-hidden="true">⌂</span>
+        <span class="nav-label">Visão Geral</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">▤</span>
+        <span class="nav-label">Transações</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">◫</span>
+        <span class="nav-label">Categorias</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">◎</span>
+        <span class="nav-label">Metas Financeiras</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">♙</span>
+        <span class="nav-label">Metas Conjuntas</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">↻</span>
+        <span class="nav-label">Recorrências</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">◇</span>
+        <span class="nav-label">Alertas e Oportunidades</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">▧</span>
+        <span class="nav-label">Duplicidades</span>
+      </a>
+      <a href="#" aria-disabled="true">
+        <span class="nav-icon" aria-hidden="true">◌</span>
+        <span class="nav-label">Conversas</span>
+      </a>
+      <a href="/web/settings">
+        <span class="nav-icon" aria-hidden="true">⚙</span>
+        <span class="nav-label">Configurações</span>
+      </a>
+      {% if auth is defined and auth.user.role == "admin" %}
+      <a href="/web/admin">
+        <span class="nav-icon" aria-hidden="true">♜</span>
+        <span class="nav-label">Administração</span>
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="privacy-box">
+      <strong>Privacidade local</strong>
+      <span class="privacy-copy">
+        Os dados financeiros permanecem no ambiente aprovado.
+      </span>
+    </div>
+  </aside>
+
+  <main class="page">
+    {% if auth is defined %}
+    <header class="topbar">
+      <div class="topbar-left">
+        <label
+          for="sidebar-toggle"
+          class="sidebar-toggle-button"
+          title="Recolher ou expandir menu"
+          aria-label="Recolher ou expandir menu"
+        >
+          <span class="toggle-lines" aria-hidden="true">☰</span>
+        </label>
+
+        <span class="viewport-badge" aria-label="Faixa atual da janela"></span>
+
+        <span class="status-pill">Modo local</span>
+        <span class="status-text">Análise determinística + LLM local</span>
+      </div>
+
+      <div class="topbar-user">
+        <span>{{ auth.user.username }}</span>
+        <form action="/web/logout" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="link-button" type="submit">Sair</button>
+        </form>
+      </div>
+    </header>
+    {% endif %}
+
+    {% if support_preview_user is defined %}
+    <div class="support-banner">
+      <strong>Visualização de suporte:</strong>
+      você está vendo a interface como
+      <strong>{{ support_preview_user.username }}</strong>.
+      Sua identidade administrativa não foi substituída.
+      <a href="/web/admin">Encerrar visualização</a>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

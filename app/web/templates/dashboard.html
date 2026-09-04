@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Visão Geral — Sherlock Home{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Visão geral</p>
+    <h1>Finanças pessoais</h1>
+    <p class="muted">
+      {{ "%02d"|format(view.period.month) }}/{{ view.period.year }}
+      · {{ view.transaction_count }} despesas registradas
+    </p>
+  </div>
+  <div class="household-note">
+    <strong>Casa</strong>
+    <span>Base local compartilhada · modelo single-household atual</span>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <article class="metric-card">
+    <span class="metric-label">Gastos no mês</span>
+    <strong>{{ view.spending_total|money }}</strong>
+    {% if view.comparison_percent is not none %}
+      <span class="metric-context">
+        {% if view.comparison_percent > 0 %}▲{% elif view.comparison_percent < 0 %}▼{% else %}•{% endif %}
+        {{ view.comparison_percent }}% em relação ao mês anterior
+      </span>
+    {% else %}
+      <span class="metric-context">Sem base suficiente para comparação</span>
+    {% endif %}
+  </article>
+
+  <article class="metric-card">
+    <span class="metric-label">Entradas</span>
+    <strong>{{ view.income_total|money }}</strong>
+    <span class="metric-context">Receitas registradas no período</span>
+  </article>
+
+  <article class="metric-card">
+    <span class="metric-label">Resultado do mês</span>
+    <strong>{{ view.net_cash_flow|money }}</strong>
+    <span class="metric-context">Entradas menos despesas</span>
+  </article>
+
+  <article class="metric-card quiet">
+    <span class="metric-label">Caminho da casa</span>
+    <strong>Metas conjuntas</strong>
+    <span class="metric-context">
+      Espaço reservado para progresso das metas compartilhadas.
+    </span>
+  </article>
+</section>
+
+<section class="dashboard-grid">
+  <article class="panel panel-wide">
+    <header class="panel-header">
+      <div>
+        <p class="eyebrow">Indicador pessoal</p>
+        <h2>Ritmo de gastos</h2>
+      </div>
+      <span class="panel-badge">comparação mensal</span>
+    </header>
+    <img
+      class="chart"
+      src="/web/charts/comparison.svg"
+      alt="Gráfico comparando os gastos do mês atual e do mês anterior"
+    >
+  </article>
+
+  <article class="panel">
+    <header class="panel-header">
+      <div>
+        <p class="eyebrow">Onde o dinheiro foi</p>
+        <h2>Gastos por categoria</h2>
+      </div>
+    </header>
+    <img
+      class="chart"
+      src="/web/charts/categories.svg"
+      alt="Gráfico horizontal com os gastos por categoria"
+    >
+  </article>
+
+  <article class="panel">
+    <header class="panel-header">
+      <div>
+        <p class="eyebrow">Rotina da casa</p>
+        <h2>Despesas recorrentes</h2>
+      </div>
+    </header>
+
+    {% if view.recurring %}
+    <div class="list-stack">
+      {% for item in view.recurring %}
+      <div class="list-row">
+        <div>
+          <strong>{{ item.name }}</strong>
+          <span>
+            {{ item.count }} ocorrências · ~{{ item.interval_days }} dias
+          </span>
+        </div>
+        <strong>{{ item.average_amount|money }}</strong>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state">Nenhuma recorrência detectada na janela disponível.</p>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <header class="panel-header">
+      <div>
+        <p class="eyebrow">Vale conferir</p>
+        <h2>Alertas e oportunidades</h2>
+      </div>
+    </header>
+
+    <div class="list-stack">
+      {% for item in view.anomalies %}
+      <div class="alert-card attention">
+        <div>
+          <strong>{{ item.merchant }}</strong>
+          <span>
+            {{ item.date.strftime("%d/%m/%Y") }} · padrão histórico
+          </span>
+        </div>
+        <strong>{{ item.amount|money }}</strong>
+        <small>
+          Base {{ item.baseline|money }} · limite {{ item.threshold|money }}
+          · {{ item.baseline_count }} registros anteriores
+        </small>
+      </div>
+      {% endfor %}
+
+      {% for item in view.duplicates %}
+      <div class="alert-card duplicate">
+        <div>
+          <strong>{{ item.merchant }}</strong>
+          <span>
+            {{ item.date.strftime("%d/%m/%Y") }} · possível duplicidade
+          </span>
+        </div>
+        <strong>{{ item.amount|money }}</strong>
+        <small>{{ item.occurrences }} lançamentos equivalentes para conferência.</small>
+      </div>
+      {% endfor %}
+
+      {% if not view.anomalies and not view.duplicates %}
+      <p class="empty-state">
+        Nenhum alerta determinístico relevante neste período.
+      </p>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="panel household-panel">
+    <header class="panel-header">
+      <div>
+        <p class="eyebrow">Metas da casa</p>
+        <h2>O que estamos construindo juntos</h2>
+      </div>
+      <span class="panel-badge">próxima capability</span>
+    </header>
+    <div class="goal-placeholder">
+      <strong>Metas conjuntas ainda não persistidas</strong>
+      <p>
+        O espaço já está reservado no dashboard, mas não inventa progresso
+        enquanto o modelo de household e permissões não existir no backend.
+      </p>
+    </div>
+  </article>
+</section>
+{% endblock %}

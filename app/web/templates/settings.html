@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações — Sherlock Home{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Preferências</p>
+    <h1>Aparência e acessibilidade</h1>
+    <p class="muted">
+      Essas escolhas alteram somente a apresentação. Os cálculos financeiros
+      continuam determinísticos no backend.
+    </p>
+  </div>
+</section>
+
+<section class="settings-card">
+  <form action="/web/settings/presentation" method="post" class="settings-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <fieldset>
+      <legend>Aparência</legend>
+      <label>
+        <input
+          type="radio"
+          name="theme"
+          value="light"
+          {% if preferences.theme == "light" %}checked{% endif %}
+        >
+        Claro
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="theme"
+          value="dark"
+          {% if preferences.theme == "dark" %}checked{% endif %}
+        >
+        Escuro
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Cores dos gráficos</legend>
+      <label>
+        <input
+          type="radio"
+          name="palette"
+          value="standard"
+          {% if preferences.palette == "standard" %}checked{% endif %}
+        >
+        Padrão
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="palette"
+          value="red_green_safe"
+          {% if preferences.palette == "red_green_safe" %}checked{% endif %}
+        >
+        Adaptado para dificuldade vermelho/verde
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="palette"
+          value="blue_yellow_safe"
+          {% if preferences.palette == "blue_yellow_safe" %}checked{% endif %}
+        >
+        Adaptado para dificuldade azul/amarelo
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Densidade do dashboard</legend>
+      <label>
+        <input
+          type="radio"
+          name="layout"
+          value="balanced"
+          {% if preferences.layout == "balanced" %}checked{% endif %}
+        >
+        Equilibrado
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="layout"
+          value="compact"
+          {% if preferences.layout == "compact" %}checked{% endif %}
+        >
+        Compacto
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="layout"
+          value="analysis"
+          {% if preferences.layout == "analysis" %}checked{% endif %}
+        >
+        Mais espaço para análise
+      </label>
+    </fieldset>
+
+    <button class="primary-button" type="submit">Salvar preferências</button>
+  </form>
+</section>
+{% endblock %}

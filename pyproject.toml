@@ -15,6 +15,11 @@ dependencies = [
 pythonpath = ["."]
 
 [project.optional-dependencies]
+web = [
+    "jinja2",
+    "python-multipart",
+    "matplotlib",
+]
 dev = [
     "pytest",
     "pytest-asyncio",

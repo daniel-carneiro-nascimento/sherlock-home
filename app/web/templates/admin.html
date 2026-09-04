@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Administração — Sherlock Home{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Administração</p>
+    <h1>Household local</h1>
+    <p class="muted">
+      O backend atual possui um único household lógico. Esta tela não finge
+      multi-household antes do modelo de autorização existir.
+    </p>
+  </div>
+</section>
+
+<section class="panel">
+  <header class="panel-header">
+    <div>
+      <p class="eyebrow">Suporte</p>
+      <h2>Usuários cadastrados</h2>
+    </div>
+    <span class="panel-badge">{{ users|length }} usuários</span>
+  </header>
+
+  <div class="user-table">
+    <div class="user-table-header">
+      <span>Usuário</span>
+      <span>Papel</span>
+      <span>Status</span>
+      <span>Suporte</span>
+    </div>
+
+    {% for user in users %}
+    <div class="user-table-row">
+      <strong>{{ user.username }}</strong>
+      <span>{{ user.role }}</span>
+      <span>{% if user.is_active %}Ativo{% else %}Desativado{% endif %}</span>
+      <span>
+        <a class="secondary-button" href="/web/admin/preview/{{ user.id }}">
+          Visualizar como
+        </a>
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="admin-warning">
+    <strong>Por que “visualizar como” e não impersonation completa?</strong>
+    <p>
+      Nesta primeira entrega o administrador continua autenticado como
+      administrador. Uma impersonation real deve ser persistida e auditada
+      no servidor, com ator, usuário-alvo, início e término explícitos.
+    </p>
+  </div>
+</section>
+{% endblock %}
