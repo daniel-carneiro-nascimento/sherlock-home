@@ -62,3 +62,6 @@ PHASE*-NOTES.txt
 PHASE*-DOCS-UPDATE*.txt
 README-*.patch
 README-*-UPDATE.txt
+
+# Local Temporary directory
+.tmp/

@@ -87,7 +87,8 @@ Parsing, financial calculations, authorization, persistence, CSRF enforcement, s
 
 For the complete architecture:
 
-**[docs/architecture.md](docs/architecture.md)**
+- **[Backend Architecture](docs/architecture.md)** — application services, security boundaries, API, persistence, ingestion, deterministic tools, and local AI runtime
+- **[Frontend Architecture](docs/frontend/architecture.md)** — web shell, navigation, view-model boundary, themes, accessibility, household goals, and chat UX
 
 ## Current AI Runtime
 
@@ -341,8 +342,10 @@ See:
 
 Detailed documentation lives under `docs/`:
 
-- **[Roadmap](docs/ROADMAP.md)** — project phases, status, and next milestones
-- **[Architecture](docs/architecture.md)** — security boundaries and system design
+- **[Backend Roadmap](docs/ROADMAP.md)** — backend/application phases, status, and implementation milestones
+- **[Frontend Roadmap](docs/frontend/ROADMAP.md)** — household-facing web phases and Holmes-Hat minimum UI
+- **[Backend Architecture](docs/architecture.md)** — application services, security boundaries, API, persistence, ingestion, deterministic tools, and local AI runtime
+- **[Frontend Architecture](docs/frontend/architecture.md)** — web shell, navigation, view-model boundary, themes, accessibility, household goals, and chat UX
 - **[API v1](docs/API_V1.md)** — authenticated API contract
 - **[Private HTTPS deployment](docs/PRIVATE_HTTPS_DEPLOYMENT.md)** — private deployment model
 - **[Financial data flow](docs/financial-data-flow.md)** — ingestion and deterministic enrichment pipeline
@@ -352,27 +355,3 @@ Detailed documentation lives under `docs/`:
 - **[Santander parser](docs/parsers/santander.md)** — current bank-specific parser
 - **[Data safety](docs/data-safety.md)** — protected-data handling
 - **[Testing](docs/testing.md)** — deterministic and synthetic test strategy
-
-## Development Principle
-
-Sherlock Home should remain portable.
-
-```text
-git clone
-    ↓
-choose a private/local runtime
-    ↓
-configure an approved local model
-    ↓
-configure local services
-    ↓
-run Sherlock Home
-```
-
-Environment-specific setup should not become a hard architectural requirement unless technically necessary.
-
-## License
-
-Sherlock Home is licensed under the **GNU General Public License v3.0 or later (`GPL-3.0-or-later`)**.
-
-See [`LICENSE.md`](LICENSE.md) for the complete license text.
